@@ -1,4 +1,4 @@
-# ExpenseFlow — Smart Expense Tracker
+# ExpenseFlow — Smart Expense Tracker(Full Stack Developer)
 
 A full-featured, visually stunning expense tracker web application built with Python Flask, SQLite, and a modern dark glassmorphism UI.
 
