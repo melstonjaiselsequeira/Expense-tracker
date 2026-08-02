@@ -33,3 +33,5 @@ A full-featured, visually stunning expense tracker web application built with Py
    Navigate to `http://localhost:5000`
 
 *Note: The app will automatically create a local SQLite database (`expenses.db`) and seed it with 15 sample expenses on first run.*
+
+this is an example project
