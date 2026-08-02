@@ -7,7 +7,7 @@ from flask_cors import CORS
 from database import db, init_db
 from models import Expense
 
-# ── App Configuration ──────────────────────────────────────────────
+# ── App Configuration ───
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///expenses.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -16,7 +16,7 @@ CORS(app)
 init_db(app)
 
 
-# ── Seed sample data ──────────────────────────────────────────────
+# ── Seed sample data ───
 def seed_data():
     """Add sample expenses if the database is empty."""
     with app.app_context():
@@ -45,14 +45,14 @@ def seed_data():
 seed_data()
 
 
-# ── Page Routes ───────────────────────────────────────────────────
+# ── Page Routes ──
 @app.route('/')
 def index():
     """Serve the main single-page application."""
     return render_template('index.html')
 
 
-# ── API: List / Filter Expenses ───────────────────────────────────
+# ── API: List / Filter Expenses ────
 @app.route('/api/expenses', methods=['GET'])
 def get_expenses():
     """Get all expenses with optional filtering."""
@@ -91,7 +91,7 @@ def get_expenses():
     return jsonify([e.to_dict() for e in expenses])
 
 
-# ── API: Create Expense ──────────────────────────────────────────
+# ── API: Create Expense ────
 @app.route('/api/expenses', methods=['POST'])
 def create_expense():
     """Create a new expense."""
@@ -114,7 +114,7 @@ def create_expense():
         return jsonify({'error': f'Invalid data: {str(e)}'}), 400
 
 
-# ── API: Update Expense ──────────────────────────────────────────
+# ── API: Update Expense ──────────
 @app.route('/api/expenses/<int:expense_id>', methods=['PUT'])
 def update_expense(expense_id):
     """Update an existing expense."""
