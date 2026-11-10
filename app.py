@@ -156,6 +156,24 @@ def confirm_email(token):
     db.session.commit()
     return jsonify({'message': 'Email verified successfully'}), 200
 
+@app.route('/resend-confirmation', methods=['POST'])
+@csrf.exempt
+@limiter.limit("5 per minute")
+def resend_confirmation():
+    data = request.get_json()
+    if not data or not data.get('email'):
+        return jsonify({'error': 'Email is required'}), 400
+    email = data.get('email').strip().lower()
+    user = User.query.filter_by(email=email).first()
+    if user:
+        if user.is_verified:
+            return jsonify({'message': 'This account is already verified. You can log in.'}), 200
+        token = generate_confirmation_token(user.email)
+        confirm_url = url_for('confirm_email', token=token, _external=True)
+        send_email(user.email, 'Confirm your account', f'Please click to confirm your email: {confirm_url}')
+    return jsonify({'message': 'If an unverified account exists with this email, a new verification link has been sent.'}), 200
+
+
 @app.route('/login', methods=['GET', 'POST'])
 @csrf.exempt
 def login():
