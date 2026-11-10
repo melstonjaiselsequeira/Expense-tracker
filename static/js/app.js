@@ -456,7 +456,28 @@ $('#btn-export').addEventListener('click', () => {
   showToast('Downloading CSV...', 'info');
 });
 
+// ── Export PDF ──────────────────────────────────────────────────
+if ($('#btn-export-pdf')) {
+  $('#btn-export-pdf').addEventListener('click', () => {
+    const now = new Date();
+    window.location.href = `${API}/report/${now.getFullYear()}/${now.getMonth() + 1}`;
+    showToast('Downloading PDF Report...', 'info');
+  });
+}
+
 // ── Init ───────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   loadDashboard();
+
+  // Check for login success or other pending notifications from previous page
+  const pendingToast = sessionStorage.getItem('pendingToast');
+  if (pendingToast) {
+    sessionStorage.removeItem('pendingToast');
+    try {
+      const parsed = JSON.parse(pendingToast);
+      showToast(parsed.message, parsed.type || 'success');
+    } catch (e) {
+      showToast(pendingToast, 'success');
+    }
+  }
 });

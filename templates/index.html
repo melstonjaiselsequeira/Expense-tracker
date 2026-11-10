@@ -48,11 +48,19 @@
             </a>
         </nav>
 
-        <div class="sidebar-footer">
+        <div class="sidebar-footer" style="display: flex; flex-direction: column; gap: 8px;">
             <button class="btn-export" id="btn-export" title="Export as CSV">
-                <i class="fas fa-download"></i>
+                <i class="fas fa-file-csv"></i>
                 <span>Export CSV</span>
             </button>
+            <button class="btn-export" id="btn-export-pdf" title="Export Monthly PDF Report">
+                <i class="fas fa-file-pdf"></i>
+                <span>Export PDF</span>
+            </button>
+            <a href="/logout" class="btn-export" id="btn-logout" title="Log Out" style="text-align: center; text-decoration: none;">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Log Out</span>
+            </a>
         </div>
     </aside>
 

@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — ExpenseFlow</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        .auth-container {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            z-index: 1;
+        }
+        .auth-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 40px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        .auth-header {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .auth-header .logo-icon {
+            width: 48px;
+            height: 48px;
+            background: var(--gradient);
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+        .auth-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+        .auth-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+        .auth-form .form-group {
+            margin-bottom: 18px;
+        }
+        .auth-form label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            margin-bottom: 6px;
+            color: var(--text-secondary);
+        }
+        .auth-form input {
+            width: 100%;
+            padding: 12px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            outline: none;
+            transition: border-color .2s;
+        }
+        .auth-form input:focus {
+            border-color: var(--accent);
+        }
+        .auth-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--gradient);
+            color: #fff;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            margin-top: 10px;
+            transition: opacity .2s;
+        }
+        .auth-btn:hover {
+            opacity: 0.9;
+        }
+        .auth-footer {
+            margin-top: 24px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .auth-footer a {
+            color: var(--accent-hover);
+            transition: color .2s;
+        }
+        .auth-footer a:hover {
+            text-decoration: underline;
+        }
+        .auth-alert {
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .auth-alert.error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+            display: block;
+        }
+        .auth-alert.success {
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #86efac;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo-icon"><i class="fas fa-wallet"></i></div>
+                <h1>Welcome Back</h1>
+                <p>Log in to your ExpenseFlow account</p>
+            </div>
+
+            <div id="auth-alert" class="auth-alert"></div>
+
+            <form id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="name@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="auth-btn">Log In</button>
+            </form>
+
+            <div class="auth-footer">
+                <div>Don't have an account? <a href="/register">Sign up</a></div>
+                <div><a href="#" id="forgot-link">Forgot password?</a></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const alertBox = document.getElementById('auth-alert');
+
+        function showAlert(msg, type, showSignupBtn = false) {
+            alertBox.className = `auth-alert ${type}`;
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+            
+            if (showSignupBtn) {
+                alertBox.innerHTML = `
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <div><i class="fas ${icon}"></i> ${msg}</div>
+                        <div>
+                            <a href="/register" class="btn-signup-alert" style="display: inline-block; padding: 6px 14px; background: var(--gradient); color: #fff; font-size: 0.85rem; font-weight: 600; border-radius: var(--radius-sm); text-decoration: none; text-align: center;">
+                                <i class="fas fa-user-plus"></i> Sign Up
+                            </a>
+                        </div>
+                    </div>
+                `;
+            } else {
+                alertBox.innerHTML = `<div><i class="fas ${icon}"></i> ${msg}</div>`;
+            }
+            alertBox.style.display = 'block';
+        }
+
+        // Check for any notification passed from registration or other pages
+        document.addEventListener('DOMContentLoaded', () => {
+            const notice = sessionStorage.getItem('loginNotice');
+            if (notice) {
+                sessionStorage.removeItem('loginNotice');
+                try {
+                    const parsed = JSON.parse(notice);
+                    showAlert(parsed.message, parsed.type || 'success');
+                } catch (e) {
+                    showAlert(notice, 'success');
+                }
+            }
+        });
+
+        document.getElementById('login-form').addEventListener('submit', async e => {
+            e.preventDefault();
+            alertBox.style.display = 'none';
+            const data = {
+                email: e.target.email.value.trim(),
+                password: e.target.password.value
+            };
+            try {
+                const resp = await fetch('/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const result = await resp.json();
+                if (resp.ok) {
+                    const successMsg = 'Login successful! Welcome back.';
+                    sessionStorage.setItem('pendingToast', JSON.stringify({
+                        message: successMsg,
+                        type: 'success'
+                    }));
+                    showAlert(successMsg, 'success');
+                    setTimeout(() => window.location.href = '/', 400);
+                } else {
+                    if (result.code === 'USER_NOT_FOUND' || (result.error && result.error.includes('Account not found'))) {
+                        showAlert('Account not found. Please sign up to continue.', 'error', true);
+                    } else if (result.code === 'INVALID_PASSWORD' || (result.error && result.error.includes('Incorrect password'))) {
+                        showAlert('Incorrect password. Please try again.', 'error', false);
+                    } else {
+                        showAlert(result.error || 'Login failed', 'error', false);
+                    }
+                }
+            } catch (err) {
+                showAlert('Network error, please try again.', 'error', false);
+            }
+        });
+
+        document.getElementById('forgot-link').addEventListener('click', async e => {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            if (!email) {
+                showAlert('Please enter your email above to reset password.', 'error');
+                return;
+            }
+            try {
+                const resp = await fetch('/reset-password-request', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({email})
+                });
+                const res = await resp.json();
+                showAlert(res.message || 'Password reset link sent if account exists.', 'success');
+            } catch (err) {
+                showAlert('Could not send reset request.', 'error');
+            }
+        });
+    </script>
+</body>
+</html>
