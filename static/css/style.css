@@ -2,7 +2,52 @@
    ExpenseFlow — Design System & Stylesheet
    ══════════════════════════════════════════════════════════════════ */
 
+:root {
+  /* Dark Theme (Default) */
+  --bg-primary: #0a0e1a;
+  --bg-secondary: #111827;
+  --bg-card: rgba(17, 24, 39, 0.75);
+  --bg-card-hover: rgba(23, 32, 51, 0.85);
+  --bg-input: rgba(255, 255, 255, 0.05);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  
+  --accent: #8b5cf6;
+  --accent-hover: #a78bfa;
+  --accent-glow: rgba(139, 92, 246, 0.3);
+  --gradient: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 100%);
+  --gradient-hover: linear-gradient(135deg, #7c3aed 0%, #0891b2 100%);
+  --gradient-subtle: linear-gradient(135deg, rgba(139, 92, 246, 0.15) 0%, rgba(6, 182, 212, 0.15) 100%);
+  
+  --danger: #ef4444;
+  --danger-glow: rgba(239, 68, 68, 0.25);
+  --success: #10b981;
+  --success-glow: rgba(16, 185, 129, 0.25);
+  --warning: #f59e0b;
+  --warning-glow: rgba(245, 158, 11, 0.25);
+  --info: #3b82f6;
 
+  --sidebar-w: 260px;
+  --radius-xl: 18px;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-pill: 9999px;
+  --card-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+  --modal-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7);
+
+  /* Category Palette */
+  --cat-food: #f97316;
+  --cat-transport: #3b82f6;
+  --cat-shopping: #ec4899;
+  --cat-bills: #eab308;
+  --cat-entertainment: #8b5cf6;
+  --cat-health: #10b981;
+  --cat-education: #06b6d4;
+  --cat-other: #64748b;
+}
 
 :root[data-theme="light"],
 html[data-theme="light"],
