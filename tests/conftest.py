@@ -1,9 +1,16 @@
 import os
-import pytest
-import sys, os
+import sys
+
+# Ensure test suite runs strictly on in-memory SQLite, never touching production/local PostgreSQL
+os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+os.environ['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+os.environ['TESTING'] = 'True'
+
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
+
+import pytest
 from app import app, db
 
 # Ignore the scratch directory during test collection to avoid name collisions

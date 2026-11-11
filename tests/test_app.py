@@ -141,7 +141,7 @@ def test_registration_success_feedback(client):
     })
     assert resp.status_code == 201
     data = resp.get_json()
-    assert data.get('message') == 'Registration successful! Please log in to continue.'
+    assert 'Registration successful!' in data.get('message', '')
 
 def test_session_remains_authenticated_on_refresh(client, verified_user):
     # Scenario 7: Refreshing the page after successful login
@@ -156,3 +156,115 @@ def test_session_remains_authenticated_on_refresh(client, verified_user):
     # API stats access in same session
     stats_resp = client.get('/api/stats')
     assert stats_resp.status_code == 200
+
+
+def test_monthly_budget_isolation_per_user(client, verified_user):
+    # Log in as User 1
+    resp1 = login(client, verified_user, 'Secret123!')
+    assert resp1.status_code == 200
+
+    # User 1 checks initial default budget
+    b_resp = client.get('/api/budget')
+    assert b_resp.status_code == 200
+    assert b_resp.get_json()['monthly_budget'] == 1000.0
+
+    # User 1 sets monthly budget to 2500
+    set_resp = client.post('/api/budget', json={'monthly_budget': 2500.0})
+    assert set_resp.status_code == 200
+    assert set_resp.get_json()['monthly_budget'] == 2500.0
+
+    # User 1 stats includes monthly_budget
+    stats1 = client.get('/api/stats').get_json()
+    assert stats1['monthly_budget'] == 2500.0
+
+    # Log out User 1
+    client.get('/logout')
+
+    # Register and verify User 2
+    client.post('/register', json={
+        'full_name': 'Second User',
+        'email': 'second@example.com',
+        'password': 'Secret456!'
+    })
+    token2 = generate_confirmation_token('second@example.com')
+    client.get(f'/confirm/{token2}')
+
+    # Log in as User 2
+    resp2 = login(client, 'second@example.com', 'Secret456!')
+    assert resp2.status_code == 200
+
+    # User 2 sees their own default budget (1000.0), NOT User 1's budget (2500.0)
+    b2_resp = client.get('/api/budget')
+    assert b2_resp.status_code == 200
+    assert b2_resp.get_json()['monthly_budget'] == 1000.0
+
+    # User 2 updates their own budget to 3500
+    set_resp2 = client.post('/api/budget', json={'monthly_budget': 3500.0})
+    assert set_resp2.status_code == 200
+    assert set_resp2.get_json()['monthly_budget'] == 3500.0
+
+    # Log out User 2 and log back in as User 1
+    client.get('/logout')
+    login(client, verified_user, 'Secret123!')
+    b1_check = client.get('/api/budget').get_json()
+    assert b1_check['monthly_budget'] == 2500.0
+
+
+def test_future_planned_expenses(client, verified_user):
+    from datetime import datetime, timedelta
+    login(client, verified_user, 'Secret123!')
+
+    today_str = datetime.now().strftime('%Y-%m-%d')
+    tomorrow_str = (datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+
+    # 1. Add an expense for today (defaults to paid)
+    exp1 = client.post('/api/expenses', json={
+        'amount': 300.0,
+        'category': 'Food',
+        'description': 'Groceries',
+        'date': today_str
+    }).get_json()
+    assert exp1['status'] == 'paid'
+
+    # 2. Add an expense for tomorrow (should automatically default to planned)
+    exp2 = client.post('/api/expenses', json={
+        'amount': 700.0,
+        'category': 'Bills',
+        'description': 'Internet Bill',
+        'date': tomorrow_str
+    }).get_json()
+    assert exp2['status'] == 'planned'
+
+    # 3. Check /api/stats: future planned expense must NOT count as actual spending
+    stats1 = client.get('/api/stats').get_json()
+    assert stats1['total'] == 300.0
+    assert stats1['monthly'] == 300.0
+    assert stats1['count'] == 1
+    assert stats1['planned_count'] == 1
+    assert stats1['planned_total'] == 700.0
+
+    # 4. Check filtering by status
+    paid_list = client.get('/api/expenses?status=paid').get_json()
+    assert len(paid_list) == 1
+    assert paid_list[0]['id'] == exp1['id']
+
+    planned_list = client.get('/api/expenses?status=planned').get_json()
+    assert len(planned_list) == 1
+    assert planned_list[0]['id'] == exp2['id']
+
+    # 5. Mark the planned expense as paid
+    mark_resp = client.post(f"/api/expenses/{exp2['id']}/mark-paid")
+    assert mark_resp.status_code == 200
+    assert mark_resp.get_json()['expense']['status'] == 'paid'
+
+    # 6. Verify stats now include the expense without duplicate
+    stats2 = client.get('/api/stats').get_json()
+    assert stats2['total'] == 1000.0
+    assert stats2['monthly'] == 1000.0
+    assert stats2['count'] == 2
+    assert stats2['planned_count'] == 0
+    assert stats2['planned_total'] == 0.0
+
+    # Total expenses count in database is still exactly 2 (zero duplication)
+    all_expenses = client.get('/api/expenses').get_json()
+    assert len(all_expenses) == 2

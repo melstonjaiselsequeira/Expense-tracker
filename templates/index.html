@@ -4,342 +4,1306 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ExpenseFlow – Smart Expense Tracker</title>
     <meta name="description"
-        content="Expense Tracker — Track, analyze, and manage your expenses with beautiful charts and insights.">
-    <title>ExpenseFlow — Smart Expense Tracker</title>
+        content="Track your expenses, manage budgets, understand your spending patterns, and make smarter financial decisions — all in one place with ExpenseFlow.">
+    <meta name="keywords" content="expense tracker, budget management, personal finance, financial analytics, money tracker, fintech">
+    <meta name="author" content="ExpenseFlow">
+    <meta name="theme-color" content="#101827">
 
-    <!-- Google Fonts -->
+    <!-- Open Graph / Meta -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="ExpenseFlow – Smart Expense Tracker">
+    <meta property="og:description"
+        content="Take control of your money and build better financial habits. Track expenses, manage monthly budgets, and analyze spending with ExpenseFlow.">
+    <meta property="og:site_name" content="ExpenseFlow">
+
+    <!-- Google Fonts: Plus Jakarta Sans & Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
 
-    <!-- Font Awesome -->
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/img/favicon.png">
+    <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+
+    <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Premium Landing Page Stylesheet -->
+    <link rel="stylesheet" href="/static/css/landing.css">
 
-    <!-- App Styles -->
-    <link rel="stylesheet" href="/static/css/style.css">
+    {% if current_user.is_authenticated %}
+    <script>
+        window.location.replace('/dashboard');
+    </script>
+    {% endif %}
 </head>
 
-<body>
+<body class="landing-body">
 
-    <!-- ═══ Sidebar ═══ -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <div class="logo">
-                <div class="logo-icon">
-                    <i class="fas fa-wallet"></i>
+    <!-- ══ Subtle Ambient Lighting Background ══ -->
+    <div class="ambient-canvas" aria-hidden="true">
+        <div class="ambient-orb orb-indigo"></div>
+        <div class="ambient-orb orb-emerald"></div>
+        <div class="ambient-grid"></div>
+    </div>
+
+    <!-- ══ Section A: Navigation Bar ══ -->
+    <header class="navbar-wrapper" id="navbar-wrapper">
+        <div class="navbar-container">
+            <!-- Brand Logo -->
+            <a href="#home" class="brand-logo" aria-label="ExpenseFlow Home">
+                <div class="brand-logo-icon">
+                    <img src="/static/img/logo.png" alt="ExpenseFlow Logo" class="brand-logo-img">
                 </div>
-                <span class="logo-text">ExpenseFlow</span>
+                <div class="brand-name-group">
+                    <span class="brand-name">Expense<span class="brand-highlight">Flow</span></span>
+                </div>
+            </a>
+
+            <!-- Desktop Navigation Links -->
+            {% if not current_user.is_authenticated %}
+            <nav class="desktop-nav" aria-label="Main Navigation">
+                <ul class="nav-menu">
+                    <li><a href="#home" class="nav-item active">Home</a></li>
+                    <li><a href="#features" class="nav-item">Features</a></li>
+                    <li><a href="#how-it-works" class="nav-item">How It Works</a></li>
+                    <li><a href="#dashboard-preview" class="nav-item">Preview</a></li>
+                    <li><a href="#about" class="nav-item">About</a></li>
+                </ul>
+            </nav>
+            {% endif %}
+
+            <!-- Authentication Actions -->
+            <div class="nav-auth-actions">
+                {% if current_user.is_authenticated %}
+                <a href="/dashboard" class="btn btn-primary btn-sm">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/logout" class="btn btn-ghost btn-sm" title="Log Out">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span>Logout</span>
+                </a>
+                {% else %}
+                <a href="/login" class="btn btn-ghost btn-sm">Log In</a>
+                <a href="/register" class="btn btn-primary btn-sm">
+                    <span>Get Started</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+                {% endif %}
+            </div>
+
+            <!-- Mobile Hamburger Toggle -->
+            <button class="hamburger-btn" id="mobile-menu-btn" aria-label="Open mobile menu" aria-expanded="false" aria-controls="mobile-nav-drawer">
+                <span class="hamburger-bar"></span>
+                <span class="hamburger-bar"></span>
+                <span class="hamburger-bar"></span>
+            </button>
+        </div>
+
+        <!-- Mobile Drawer Menu -->
+        <div class="mobile-drawer" id="mobile-nav-drawer" aria-hidden="true">
+            <div class="mobile-drawer-inner">
+                {% if not current_user.is_authenticated %}
+                <ul class="mobile-menu-list">
+                    <li><a href="#home" class="mobile-nav-link active"><i class="fas fa-home"></i> Home</a></li>
+                    <li><a href="#features" class="mobile-nav-link"><i class="fas fa-wand-magic-sparkles"></i> Features</a></li>
+                    <li><a href="#how-it-works" class="mobile-nav-link"><i class="fas fa-layer-group"></i> How It Works</a></li>
+                    <li><a href="#dashboard-preview" class="mobile-nav-link"><i class="fas fa-desktop"></i> Dashboard Preview</a></li>
+                    <li><a href="#about" class="mobile-nav-link"><i class="fas fa-info-circle"></i> About ExpenseFlow</a></li>
+                </ul>
+                {% endif %}
+                <div class="mobile-auth-section">
+                    {% if current_user.is_authenticated %}
+                    <a href="/dashboard" class="btn btn-primary btn-full">
+                        <i class="fas fa-chart-pie"></i> Open Dashboard
+                    </a>
+                    <a href="/logout" class="btn btn-secondary btn-full">
+                        <i class="fas fa-sign-out-alt"></i> Log Out
+                    </a>
+                    {% else %}
+                    <a href="/login" class="btn btn-secondary btn-full">Log In</a>
+                    <a href="/register" class="btn btn-primary btn-full">
+                        Get Started – It's Free <i class="fas fa-arrow-right"></i>
+                    </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
-
-        <nav class="sidebar-nav">
-            <a href="#" class="nav-item active" data-view="dashboard" id="nav-dashboard">
-                <i class="fas fa-chart-pie"></i>
-                <span>Dashboard</span>
-            </a>
-            <a href="#" class="nav-item" data-view="expenses" id="nav-expenses">
-                <i class="fas fa-receipt"></i>
-                <span>Expenses</span>
-            </a>
-        </nav>
-
-        <div class="sidebar-footer" style="display: flex; flex-direction: column; gap: 8px;">
-            <button class="btn-export" id="btn-export" title="Export as CSV">
-                <i class="fas fa-file-csv"></i>
-                <span>Export CSV</span>
-            </button>
-            <button class="btn-export" id="btn-export-pdf" title="Export Monthly PDF Report">
-                <i class="fas fa-file-pdf"></i>
-                <span>Export PDF</span>
-            </button>
-            <a href="/logout" class="btn-export" id="btn-logout" title="Log Out" style="text-align: center; text-decoration: none;">
-                <i class="fas fa-sign-out-alt"></i>
-                <span>Log Out</span>
-            </a>
-        </div>
-    </aside>
-
-    <!-- ═══ Mobile Header ═══ -->
-    <header class="mobile-header">
-        <button class="menu-toggle" id="menu-toggle">
-            <i class="fas fa-bars"></i>
-        </button>
-        <div class="logo">
-            <div class="logo-icon small">
-                <i class="fas fa-wallet"></i>
-            </div>
-            <span class="logo-text">ExpenseFlow</span>
-        </div>
-        <button class="btn-add-mobile" id="btn-add-mobile" title="Add Expense">
-            <i class="fas fa-plus"></i>
-        </button>
     </header>
 
-    <!-- ═══ Main Content ═══ -->
-    <main class="main-content">
+    <main>
+        <!-- ══ Section B: Hero Section ══ -->
+        <section class="hero-section" id="home">
+            <div class="container hero-container">
+                <div class="hero-content">
+                    <!-- Pill Announcement Badge -->
+                    <div class="pill-badge">
+                        <span class="badge-status-dot"></span>
+                        <span class="badge-text">Next-Generation Personal Finance </span>
+                        <i class="fas fa-angle-right badge-icon"></i>
+                    </div>
 
-        <!-- ── Dashboard View ── -->
-        <section class="view active" id="view-dashboard">
-            <div class="view-header">
-                <div>
-                    <h1>Dashboard</h1>
-                    <p class="subtitle">Your spending overview at a glance</p>
-                </div>
-                <button class="btn-primary" id="btn-add-expense">
-                    <i class="fas fa-plus"></i>
-                    <span>Add Expense</span>
-                </button>
-            </div>
+                    <!-- Main Heading -->
+                    <h1 class="hero-title">
+                        Take Control of Your Money. <span class="gradient-text">Build Better Financial Habits.</span>
+                    </h1>
 
-            <!-- Stats Cards -->
-            <div class="stats-grid">
-                <div class="stat-card" id="stat-total">
-                    <div class="stat-icon total">
-                        <i class="fas fa-coins"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Total Spent</span>
-                        <span class="stat-value" id="stat-total-value">$0.00</span>
-                    </div>
-                </div>
-                <div class="stat-card" id="stat-monthly">
-                    <div class="stat-icon monthly">
-                        <i class="fas fa-calendar-alt"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">This Month</span>
-                        <span class="stat-value" id="stat-monthly-value">$0.00</span>
-                    </div>
-                </div>
-                <div class="stat-card" id="stat-daily">
-                    <div class="stat-icon daily">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Daily Average</span>
-                        <span class="stat-value" id="stat-daily-value">$0.00</span>
-                    </div>
-                </div>
-                <div class="stat-card" id="stat-top">
-                    <div class="stat-icon top">
-                        <i class="fas fa-fire"></i>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Top Category</span>
-                        <span class="stat-value" id="stat-top-value">—</span>
-                    </div>
-                </div>
-            </div>
+                    <!-- Supporting Text -->
+                    <p class="hero-subtitle">
+                        Track your expenses, manage budgets, understand your spending patterns, and make smarter financial decisions — all in one place.
+                    </p>
 
-            <!-- Charts -->
-            <div class="charts-grid">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3><i class="fas fa-chart-area"></i> Spending Trend</h3>
-                        <span class="chart-badge">Last 30 Days</span>
+                    <!-- CTAs -->
+                    <div class="hero-cta-group">
+                        <a href="/register" class="btn btn-primary btn-lg">
+                            <span>Get Started – It's Free</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                        <a href="#features" class="btn btn-secondary btn-lg">
+                            <i class="fas fa-compass"></i>
+                            <span>Explore Features</span>
+                        </a>
                     </div>
-                    <div class="chart-body">
-                        <canvas id="trendChart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <h3><i class="fas fa-chart-pie"></i> Category Breakdown</h3>
-                        <span class="chart-badge">All Time</span>
-                    </div>
-                    <div class="chart-body chart-body-donut">
-                        <canvas id="categoryChart"></canvas>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Recent Expenses -->
-            <div class="recent-card">
-                <div class="chart-header">
-                    <h3><i class="fas fa-clock"></i> Recent Expenses</h3>
-                    <a href="#" class="view-all-link" id="view-all-link">View All <i class="fas fa-arrow-right"></i></a>
+                    <!-- Trust Bar -->
+                    <div class="hero-trust-bar">
+                        <div class="trust-item">
+                            <i class="fas fa-check"></i>
+                            <span>100% Free Account</span>
+                        </div>
+                        <div class="trust-item">
+                            <i class="fas fa-check"></i>
+                            <span>No Credit Card Required</span>
+                        </div>
+                        <div class="trust-item">
+                            <i class="fas fa-check"></i>
+                            <span>PDF & CSV Export Ready</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="recent-list" id="recent-list">
-                    <!-- Populated by JS -->
+
+                <!-- ══ Dashboard Visual Preview Beside/Below Hero ══ -->
+                <div class="hero-preview-col">
+                    <div class="preview-device-card">
+                        <!-- Top Browser Chrome Bar -->
+                        <div class="device-chrome-bar">
+                            <div class="chrome-controls">
+                                <span class="chrome-dot red"></span>
+                                <span class="chrome-dot yellow"></span>
+                                <span class="chrome-dot green"></span>
+                            </div>
+                            <div class="chrome-address">
+                                <i class="fas fa-lock"></i>
+                                <span>app.expenseflow.com/dashboard</span>
+                            </div>
+                            <div class="chrome-actions">
+                                <span class="chrome-live-tag"><span class="pulse-dot"></span> Live Demo</span>
+                            </div>
+                        </div>
+
+                        <!-- Inside Dashboard Mockup -->
+                        <div class="device-viewport">
+                            <!-- Dashboard Header Mock -->
+                            <div class="dash-mock-topbar">
+                                <div class="dash-user-welcome">
+                                    <div class="dash-avatar">JD</div>
+                                    <div>
+                                        <div class="dash-welcome-title">Welcome back, John</div>
+                                        <div class="dash-welcome-sub">November Financial Overview</div>
+                                    </div>
+                                </div>
+                                <div class="dash-top-badge">
+                                    <span class="badge-emerald"><i class="fas fa-shield-alt"></i> Verified Account</span>
+                                </div>
+                            </div>
+
+                            <!-- 4 Key Stat Cards -->
+                            <div class="dash-kpi-grid">
+                                <!-- Card 1: Total Spent -->
+                                <div class="dash-kpi-card">
+                                    <div class="kpi-label">
+                                        <span>Total Spent</span>
+                                        <div class="kpi-icon-pill icon-indigo"><i class="fas fa-coins"></i></div>
+                                    </div>
+                                    <div class="kpi-value">$3,845.50</div>
+                                    <div class="kpi-trend positive">
+                                        <i class="fas fa-receipt"></i>
+                                        <span>All-time records</span>
+                                    </div>
+                                </div>
+
+                                <!-- Card 2: This Month -->
+                                <div class="dash-kpi-card">
+                                    <div class="kpi-label">
+                                        <span>This Month</span>
+                                        <div class="kpi-icon-pill icon-emerald"><i class="fas fa-calendar-alt"></i></div>
+                                    </div>
+                                    <div class="kpi-value">$1,245.50</div>
+                                    <div class="kpi-trend neutral">
+                                        <i class="fas fa-calendar-check"></i>
+                                        <span>23 transactions</span>
+                                    </div>
+                                </div>
+
+                                <!-- Card 3: Daily Average -->
+                                <div class="dash-kpi-card">
+                                    <div class="kpi-label">
+                                        <span>Daily Average</span>
+                                        <div class="kpi-icon-pill icon-rose"><i class="fas fa-chart-line"></i></div>
+                                    </div>
+                                    <div class="kpi-value">$41.50</div>
+                                    <div class="kpi-trend neutral">
+                                        <i class="fas fa-clock"></i>
+                                        <span>Past 30 days</span>
+                                    </div>
+                                </div>
+
+                                <!-- Card 4: Top Category -->
+                                <div class="dash-kpi-card">
+                                    <div class="kpi-label">
+                                        <span>Top Category</span>
+                                        <div class="kpi-icon-pill icon-amber"><i class="fas fa-fire"></i></div>
+                                    </div>
+                                    <div class="kpi-value" style="font-size: 1.25rem;">Food &amp; Dining</div>
+                                    <div class="kpi-trend positive">
+                                        <i class="fas fa-utensils"></i>
+                                        <span>32.4% of total</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Budget Progress Showcase -->
+                            <div class="dash-budget-box">
+                                <div class="budget-header-row">
+                                    <div class="budget-title-wrap">
+                                        <i class="fas fa-bullseye budget-icon"></i>
+                                        <div>
+                                            <span class="budget-title">Monthly Budget Ceiling</span>
+                                            <span class="budget-sub">$2,845.50 spent of $3,500.00 limit</span>
+                                        </div>
+                                    </div>
+                                    <span class="budget-status-pill on-track">
+                                        <i class="fas fa-check-circle"></i> On Track (81.3%)
+                                    </span>
+                                </div>
+                                <div class="budget-progress-track">
+                                    <div class="budget-progress-bar" style="width: 81.3%;"></div>
+                                </div>
+                                <div class="budget-footer-metrics">
+                                    <span>Target: <strong>$3,500.00</strong></span>
+                                    <span>Safe Remaining: <strong class="text-emerald">$654.50</strong></span>
+                                    <span>Pace: <strong>7 days left</strong></span>
+                                </div>
+                            </div>
+
+                            <!-- Split Visual Area: Chart & Recent Transactions -->
+                            <div class="dash-split-grid">
+                                <!-- Spending Trajectory Chart -->
+                                <div class="dash-panel">
+                                    <div class="dash-panel-header">
+                                        <div>
+                                            <span class="panel-title">Spending Trajectory</span>
+                                            <span class="panel-subtitle">Cash Outflow Trend (Last 30 Days)</span>
+                                        </div>
+                                        <span class="panel-badge-soft">Daily Track</span>
+                                    </div>
+                                    <!-- High-Fidelity SVG Curve Chart -->
+                                    <div class="chart-container">
+                                        <svg class="spending-curve-svg" viewBox="0 0 400 130" preserveAspectRatio="none">
+                                            <defs>
+                                                <linearGradient id="heroChartFill" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stop-color="#635BFF" stop-opacity="0.25"/>
+                                                    <stop offset="100%" stop-color="#635BFF" stop-opacity="0.0"/>
+                                                </linearGradient>
+                                                <linearGradient id="heroLineGrad" x1="0" y1="0" x2="1" y2="0">
+                                                    <stop offset="0%" stop-color="#635BFF"/>
+                                                    <stop offset="100%" stop-color="#17B890"/>
+                                                </linearGradient>
+                                            </defs>
+                                            <!-- Grid Lines -->
+                                            <line x1="0" y1="25" x2="400" y2="25" stroke="#F1F4F9" stroke-width="1" stroke-dasharray="4 4"/>
+                                            <line x1="0" y1="65" x2="400" y2="65" stroke="#F1F4F9" stroke-width="1" stroke-dasharray="4 4"/>
+                                            <line x1="0" y1="105" x2="400" y2="105" stroke="#F1F4F9" stroke-width="1" stroke-dasharray="4 4"/>
+                                            <!-- Area Fill -->
+                                            <path d="M 0,110 Q 50,95 100,100 T 200,60 T 300,75 T 400,30 L 400,130 L 0,130 Z" fill="url(#heroChartFill)"/>
+                                            <!-- Stroke Curve -->
+                                            <path d="M 0,110 Q 50,95 100,100 T 200,60 T 300,75 T 400,30" fill="none" stroke="url(#heroLineGrad)" stroke-width="2.5" stroke-linecap="round"/>
+                                            <!-- Data Points -->
+                                            <circle cx="200" cy="60" r="4.5" fill="#635BFF" stroke="#FFFFFF" stroke-width="2"/>
+                                            <circle cx="400" cy="30" r="4.5" fill="#17B890" stroke="#FFFFFF" stroke-width="2"/>
+                                        </svg>
+                                        <div class="chart-x-axis">
+                                            <span>Nov 01</span>
+                                            <span>Nov 10</span>
+                                            <span>Nov 20</span>
+                                            <span>Nov 30</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Recent Transactions Ledger -->
+                                <div class="dash-panel">
+                                    <div class="dash-panel-header">
+                                        <div>
+                                            <span class="panel-title">Recent Transactions</span>
+                                            <span class="panel-subtitle">Latest account ledger entries</span>
+                                        </div>
+                                        <span class="panel-badge-soft">Live Activity</span>
+                                    </div>
+                                    <div class="mini-tx-list">
+                                        <div class="mini-tx-item">
+                                            <div class="tx-avatar food"><i class="fas fa-utensils"></i></div>
+                                            <div class="tx-info">
+                                                <div class="tx-title">Whole Foods Market</div>
+                                                <div class="tx-meta">Food &bull; Nov 10, 2026</div>
+                                            </div>
+                                            <div class="tx-amount negative">-$64.20</div>
+                                        </div>
+                                        <div class="mini-tx-item">
+                                            <div class="tx-avatar bills"><i class="fas fa-file-invoice-dollar"></i></div>
+                                            <div class="tx-info">
+                                                <div class="tx-title">Electric Utility Statement</div>
+                                                <div class="tx-meta">Bills &bull; Nov 09, 2026</div>
+                                            </div>
+                                            <div class="tx-amount negative">-$85.00</div>
+                                        </div>
+                                        <div class="mini-tx-item">
+                                            <div class="tx-avatar transport"><i class="fas fa-gas-pump"></i></div>
+                                            <div class="tx-info">
+                                                <div class="tx-title">Shell Commuter Fuel</div>
+                                                <div class="tx-meta">Transport &bull; Nov 08, 2026</div>
+                                            </div>
+                                            <div class="tx-amount negative">-$38.50</div>
+                                        </div>
+                                        <div class="mini-tx-item">
+                                            <div class="tx-avatar shopping"><i class="fas fa-bag-shopping"></i></div>
+                                            <div class="tx-info">
+                                                <div class="tx-title">Office Tech &amp; Supplies</div>
+                                                <div class="tx-meta">Shopping &bull; Nov 07, 2026</div>
+                                            </div>
+                                            <div class="tx-amount negative">-$42.90</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Floating Micro-Widgets -->
+                        <div class="floating-stat-pill pill-top-right">
+                            <div class="pill-icon-glow"><i class="fas fa-bolt"></i></div>
+                            <div>
+                                <div class="pill-label">Budget Efficiency</div>
+                                <div class="pill-sub">18.7% under ceiling</div>
+                            </div>
+                        </div>
+                        <div class="floating-stat-pill pill-bottom-left">
+                            <div class="pill-icon-glow green"><i class="fas fa-circle-check"></i></div>
+                            <div>
+                                <div class="pill-label">Safe Remaining</div>
+                                <div class="pill-sub">$654.50 under budget</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="preview-disclaimer">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Interactive platform demonstration. Features realistic sample data for illustration purposes.</span>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- ── Expenses View ── -->
-        <section class="view" id="view-expenses">
-            <div class="view-header">
-                <div>
-                    <h1>Expenses</h1>
-                    <p class="subtitle">Manage all your expenses</p>
+        <!-- ══ Section C: Features Section ══ -->
+        <section class="section features-section" id="features">
+            <div class="container">
+                <div class="section-heading-center">
+                    <span class="section-eyebrow">
+                        <i class="fas fa-wand-magic-sparkles"></i> Comprehensive Platform Features
+                    </span>
+                    <h2 class="section-title">
+                        Everything You Need for Total Financial Clarity
+                    </h2>
+                    <p class="section-subtitle">
+                        Purpose-built tools designed to simplify your everyday money tracking, eliminate budget anxiety, and deliver actionable personal finance insights.
+                    </p>
                 </div>
-                <button class="btn-primary" id="btn-add-expense-2">
-                    <i class="fas fa-plus"></i>
-                    <span>Add Expense</span>
-                </button>
-            </div>
 
-            <!-- Filters -->
-            <div class="filters-bar">
-                <div class="filter-group">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="search-input" placeholder="Search expenses...">
+                <div class="features-grid">
+                    <!-- Feature 1: Expense Management -->
+                    <div class="feature-card reveal-item">
+                        <div class="feature-icon-box icon-indigo">
+                            <i class="fas fa-receipt"></i>
+                        </div>
+                        <h3 class="feature-title">Expense Management</h3>
+                        <p class="feature-description">
+                            Easily record, categorize, edit, and manage daily transactions.
+                        </p>
+                        <ul class="feature-checklist">
+                            <li><i class="fas fa-check"></i> Instant transaction logging</li>
+                            <li><i class="fas fa-check"></i> Flexible category assignments</li>
+                            <li><i class="fas fa-check"></i> Fast inline editing and updates</li>
+                        </ul>
                     </div>
-                </div>
-                <div class="filter-group">
-                    <select id="filter-category" class="filter-select">
-                        <option value="All">All Categories</option>
-                        <option value="Food">🍕 Food</option>
-                        <option value="Transport">🚗 Transport</option>
-                        <option value="Shopping">🛍️ Shopping</option>
-                        <option value="Bills">📄 Bills</option>
-                        <option value="Entertainment">🎬 Entertainment</option>
-                        <option value="Health">💊 Health</option>
-                        <option value="Education">📚 Education</option>
-                        <option value="Other">📦 Other</option>
-                    </select>
-                    <input type="date" id="filter-start-date" class="filter-date" title="Start Date">
-                    <input type="date" id="filter-end-date" class="filter-date" title="End Date">
-                    <select id="filter-sort" class="filter-select">
-                        <option value="date_desc">Newest First</option>
-                        <option value="date_asc">Oldest First</option>
-                        <option value="amount_desc">Highest Amount</option>
-                        <option value="amount_asc">Lowest Amount</option>
-                    </select>
-                </div>
-            </div>
 
-            <!-- Expenses Table -->
-            <div class="expenses-table-card">
-                <div class="table-responsive">
-                    <table class="expenses-table" id="expenses-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Category</th>
-                                <th>Description</th>
-                                <th>Amount</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody id="expenses-tbody">
-                            <!-- Populated by JS -->
-                        </tbody>
-                    </table>
-                </div>
-                <div class="table-footer" id="table-footer">
-                    <span class="table-info" id="table-info">Showing 0 expenses</span>
-                    <span class="table-total" id="table-total">Total: $0.00</span>
+                    <!-- Feature 2: Expense Categorization -->
+                    <div class="feature-card reveal-item">
+                        <div class="feature-icon-box icon-emerald">
+                            <i class="fas fa-tags"></i>
+                        </div>
+                        <h3 class="feature-title">Expense Categorization</h3>
+                        <p class="feature-description">
+                            Organize expenses into meaningful categories to understand spending habits.
+                        </p>
+                        <ul class="feature-checklist">
+                            <li><i class="fas fa-check"></i> Built-in categories (Food, Bills, Transport, etc.)</li>
+                            <li><i class="fas fa-check"></i> Visual category badges and icon tagging</li>
+                            <li><i class="fas fa-check"></i> Category-based filtering and instant search</li>
+                        </ul>
+                    </div>
+
+                    <!-- Feature 3: Budget Management -->
+                    <div class="feature-card reveal-item">
+                        <div class="feature-icon-box icon-blue">
+                            <i class="fas fa-bullseye"></i>
+                        </div>
+                        <h3 class="feature-title">Budget Management</h3>
+                        <p class="feature-description">
+                            Set monthly budgets and track your spending against your limits.
+                        </p>
+                        <ul class="feature-checklist">
+                            <li><i class="fas fa-check"></i> Custom monthly budget targets</li>
+                            <li><i class="fas fa-check"></i> Visual progress meters</li>
+                            <li><i class="fas fa-check"></i> Proactive spending warnings</li>
+                        </ul>
+                    </div>
+
+                    <!-- Feature 4: Financial Analytics -->
+                    <div class="feature-card reveal-item">
+                        <div class="feature-icon-box icon-purple">
+                            <i class="fas fa-chart-pie"></i>
+                        </div>
+                        <h3 class="feature-title">Financial Analytics</h3>
+                        <p class="feature-description">
+                            Visualize expenses through interactive charts and category breakdowns.
+                        </p>
+                        <ul class="feature-checklist">
+                            <li><i class="fas fa-check"></i> 30-day cash outflow trends</li>
+                            <li><i class="fas fa-check"></i> Category distribution breakdown</li>
+                            <li><i class="fas fa-check"></i> Daily average spending metrics</li>
+                        </ul>
+                    </div>
+
+                    <!-- Feature 5: Transaction History -->
+                    <div class="feature-card reveal-item">
+                        <div class="feature-icon-box icon-amber">
+                            <i class="fas fa-history"></i>
+                        </div>
+                        <h3 class="feature-title">Transaction History</h3>
+                        <p class="feature-description">
+                            Review previous transactions and search your financial records.
+                        </p>
+                        <ul class="feature-checklist">
+                            <li><i class="fas fa-check"></i> Real-time description search</li>
+                            <li><i class="fas fa-check"></i> Date range and category filters</li>
+                            <li><i class="fas fa-check"></i> Multi-column dynamic sorting</li>
+                        </ul>
+                    </div>
+
+                    <!-- Feature 6: Reports and Export -->
+                    <div class="feature-card reveal-item">
+                        <div class="feature-icon-box icon-rose">
+                            <i class="fas fa-file-invoice-dollar"></i>
+                        </div>
+                        <h3 class="feature-title">Reports and Export</h3>
+                        <p class="feature-description">
+                            Generate and download financial reports in PDF format and CSV spreadsheet format.
+                        </p>
+                        <ul class="feature-checklist">
+                            <li><i class="fas fa-check"></i> Download monthly PDF reports</li>
+                            <li><i class="fas fa-check"></i> Instant CSV ledger export</li>
+                            <li><i class="fas fa-check"></i> Print-ready statement formatting</li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </section>
 
-    </main>
+        <!-- ══ Section D: How It Works Section ══ -->
+        <section class="section steps-section" id="how-it-works">
+            <div class="container">
+                <div class="section-heading-center">
+                    <span class="section-eyebrow">
+                        <i class="fas fa-route"></i> Streamlined Workflow
+                    </span>
+                    <h2 class="section-title">
+                        Get Started in Three Simple Steps
+                    </h2>
+                    <p class="section-subtitle">
+                        ExpenseFlow is engineered to be friction-free. Start gaining immediate financial clarity in under two minutes.
+                    </p>
+                </div>
 
-    <!-- ═══ Add/Edit Modal ═══ -->
-    <div class="modal-overlay" id="modal-overlay">
-        <div class="modal" id="expense-modal">
-            <div class="modal-header">
-                <h2 id="modal-title"><i class="fas fa-plus-circle"></i> Add Expense</h2>
-                <button class="modal-close" id="modal-close">
-                    <i class="fas fa-times"></i>
-                </button>
+                <div class="steps-container">
+                    <div class="steps-connector-line" aria-hidden="true"></div>
+
+                    <!-- Step 1 -->
+                    <div class="step-card reveal-item">
+                        <div class="step-badge">
+                            <span class="step-number">01</span>
+                        </div>
+                        <div class="step-icon-wrap">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <h3 class="step-card-title">Create Your Account</h3>
+                        <p class="step-card-text">
+                            Sign up and access your personal expense dashboard.
+                        </p>
+                        <div class="step-card-detail">
+                            Quick email registration with token-based email verification guarantees complete privacy and secure access to your account.
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="step-card reveal-item">
+                        <div class="step-badge">
+                            <span class="step-number">02</span>
+                        </div>
+                        <div class="step-icon-wrap">
+                            <i class="fas fa-pen-to-square"></i>
+                        </div>
+                        <h3 class="step-card-title">Track Your Expenses</h3>
+                        <p class="step-card-text">
+                            Add expenses and organize them into meaningful categories.
+                        </p>
+                        <div class="step-card-detail">
+                            Log daily expenses with categories, dates, and clear descriptions to maintain an organized personal ledger without spreadsheets.
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="step-card reveal-item">
+                        <div class="step-badge">
+                            <span class="step-number">03</span>
+                        </div>
+                        <div class="step-icon-wrap">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3 class="step-card-title">Analyze Your Spending</h3>
+                        <p class="step-card-text">
+                            Understand your financial habits and make better decisions.
+                        </p>
+                        <div class="step-card-detail">
+                            Inspect visual trends, track your monthly budget progress in real time, and export verified PDF reports whenever needed.
+                        </div>
+                    </div>
+                </div>
             </div>
-            <form id="expense-form">
-                <input type="hidden" id="expense-id">
-                <div class="form-group">
-                    <label for="expense-amount">Amount ($)</label>
-                    <div class="input-icon-wrapper">
-                        <i class=""></i>
-                        <input type="number" id="expense-amount" step="0.01" min="0.01" placeholder="$0.00" required>
-                    </div>
+        </section>
+
+        <!-- ══ Section E: Dashboard Preview Section ══ -->
+        <section class="section showcase-section" id="dashboard-preview">
+            <div class="container">
+                <div class="section-heading-center">
+                    <span class="section-eyebrow">
+                        <i class="fas fa-desktop"></i> Interactive Workspace Preview
+                    </span>
+                    <h2 class="section-title">
+                        A Clean, Focused Interface for Modern Finances
+                    </h2>
+                    <p class="section-subtitle">
+                        Experience the actual interface designed for rapid daily tracking, intelligent categorization, and clear visual oversight.
+                    </p>
                 </div>
-                <div class="form-group">
-                    <label for="expense-category">Category</label>
-                    <div class="category-grid" id="category-grid">
-                        <label class="category-option">
-                            <input type="radio" name="category" value="Food">
-                            <span class="category-chip food"><i class="fas fa-utensils"></i> Food</span>
-                        </label>
-                        <label class="category-option">
-                            <input type="radio" name="category" value="Transport">
-                            <span class="category-chip transport"><i class="fas fa-car"></i> Transport</span>
-                        </label>
-                        <label class="category-option">
-                            <input type="radio" name="category" value="Shopping">
-                            <span class="category-chip shopping"><i class="fas fa-bag-shopping"></i> Shopping</span>
-                        </label>
-                        <label class="category-option">
-                            <input type="radio" name="category" value="Bills">
-                            <span class="category-chip bills"><i class="fas fa-file-invoice"></i> Bills</span>
-                        </label>
-                        <label class="category-option">
-                            <input type="radio" name="category" value="Entertainment">
-                            <span class="category-chip entertainment"><i class="fas fa-film"></i> Entertainment</span>
-                        </label>
-                        <label class="category-option">
-                            <input type="radio" name="category" value="Health">
-                            <span class="category-chip health"><i class="fas fa-heartbeat"></i> Health</span>
-                        </label>
-                        <label class="category-option">
-                            <input type="radio" name="category" value="Education">
-                            <span class="category-chip education"><i class="fas fa-graduation-cap"></i> Education</span>
-                        </label>
-                        <label class="category-option">
-                            <input type="radio" name="category" value="Other">
-                            <span class="category-chip other"><i class="fas fa-box"></i> Other</span>
-                        </label>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="expense-description">Description</label>
-                    <input type="text" id="expense-description" placeholder="What did you spend on?" required>
-                </div>
-                <div class="form-group">
-                    <label for="expense-date">Date</label>
-                    <input type="date" id="expense-date" required>
-                </div>
-                <div class="form-actions">
-                    <button type="button" class="btn-secondary" id="btn-cancel">Cancel</button>
-                    <button type="submit" class="btn-primary" id="btn-save">
-                        <i class="fas fa-check"></i> Save Expense
+
+                <!-- Showcase Interactive Tab Bar -->
+                <div class="showcase-nav-tabs">
+                    <button class="showcase-tab active" data-tab="tab-overview">
+                        <i class="fas fa-chart-area"></i>
+                        <span>Spending Trend</span>
+                    </button>
+                    <button class="showcase-tab" data-tab="tab-categories">
+                        <i class="fas fa-tags"></i>
+                        <span>Category Breakdown</span>
+                    </button>
+                    <button class="showcase-tab" data-tab="tab-transactions">
+                        <i class="fas fa-table-list"></i>
+                        <span>Recent Ledger</span>
+                    </button>
+                    <button class="showcase-tab" data-tab="tab-budget">
+                        <i class="fas fa-bullseye"></i>
+                        <span>Budget Tracking</span>
                     </button>
                 </div>
-            </form>
+
+                <!-- Showcase Main Window Frame -->
+                <div class="showcase-window-card">
+                    <!-- Browser Chrome Header -->
+                    <div class="showcase-chrome">
+                        <div class="chrome-controls">
+                            <span class="chrome-dot red"></span>
+                            <span class="chrome-dot yellow"></span>
+                            <span class="chrome-dot green"></span>
+                        </div>
+                        <div class="chrome-url-box">
+                            <i class="fas fa-lock"></i>
+                            <span>https://app.expenseflow.com/dashboard</span>
+                        </div>
+                        <div class="chrome-actions-right">
+                            <span class="chrome-badge-verified"><i class="fas fa-check"></i> System Operational</span>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Tab Content Views -->
+                    <div class="showcase-body">
+
+                        <!-- TAB 1: Spending Trend & 30-Day Analysis -->
+                        <div class="tab-view active" id="tab-overview">
+                            <div class="tab-grid-overview">
+                                <!-- Left: Spending Trend Chart Card -->
+                                <div class="showcase-panel">
+                                    <div class="panel-header-with-badge">
+                                        <div>
+                                            <h4 class="showcase-panel-title">Daily Spending Trend</h4>
+                                            <p class="showcase-panel-sub">Daily expense outflow across the past 30 days</p>
+                                        </div>
+                                        <div class="panel-tag-group">
+                                            <span class="legend-dot expense"></span> Daily Spending
+                                            <span class="legend-dot target" style="background: #10b981;"></span> Daily Target
+                                        </div>
+                                    </div>
+
+                                    <!-- Spending Trend SVG Diagram -->
+                                    <div class="showcase-svg-wrap">
+                                        <svg class="overview-svg" viewBox="0 0 540 180" preserveAspectRatio="none">
+                                            <defs>
+                                                <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="0%" stop-color="#10b981" stop-opacity="0.25"/>
+                                                    <stop offset="100%" stop-color="#10b981" stop-opacity="0.0"/>
+                                                </linearGradient>
+                                            </defs>
+                                            <!-- Grid lines -->
+                                            <line x1="40" y1="30" x2="520" y2="30" stroke="#E5E7EB" stroke-dasharray="3 3"/>
+                                            <line x1="40" y1="75" x2="520" y2="75" stroke="#E5E7EB" stroke-dasharray="3 3"/>
+                                            <line x1="40" y1="120" x2="520" y2="120" stroke="#E5E7EB" stroke-dasharray="3 3"/>
+                                            <line x1="40" y1="160" x2="520" y2="160" stroke="#D1D5DB"/>
+
+                                            <!-- Daily Target Baseline (Dashed Green) -->
+                                            <line x1="40" y1="65" x2="520" y2="65" stroke="#059669" stroke-width="2" stroke-dasharray="5 5"/>
+
+                                            <!-- Daily Expense Curve & Area (Emerald) -->
+                                            <path d="M 40,135 Q 90,80 140,110 T 240,65 T 340,95 T 440,55 T 520,75 L 520,160 L 40,160 Z" fill="url(#spendGrad)"/>
+                                            <path d="M 40,135 Q 90,80 140,110 T 240,65 T 340,95 T 440,55 T 520,75" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round"/>
+
+                                            <!-- Key Plot Points -->
+                                            <circle cx="140" cy="110" r="4" fill="#10b981" stroke="#FFFFFF" stroke-width="2"/>
+                                            <circle cx="240" cy="65" r="4" fill="#10b981" stroke="#FFFFFF" stroke-width="2"/>
+                                            <circle cx="340" cy="95" r="4" fill="#10b981" stroke="#FFFFFF" stroke-width="2"/>
+                                            <circle cx="440" cy="55" r="5" fill="#10b981" stroke="#FFFFFF" stroke-width="2"/>
+                                            <circle cx="520" cy="75" r="4" fill="#10b981" stroke="#FFFFFF" stroke-width="2"/>
+                                        </svg>
+                                    </div>
+                                    <div class="overview-chart-footer">
+                                        <div class="metric-highlight">
+                                            <span class="m-label">Total Spent</span>
+                                            <span class="m-val text-navy">$2,845.50</span>
+                                        </div>
+                                        <div class="metric-highlight">
+                                            <span class="m-label">This Month</span>
+                                            <span class="m-val text-emerald">$1,245.50</span>
+                                        </div>
+                                        <div class="metric-highlight">
+                                            <span class="m-label">Daily Average</span>
+                                            <span class="m-val text-indigo">$41.50 / day</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Right: Monthly Breakdown Summary -->
+                                <div class="showcase-panel">
+                                    <h4 class="showcase-panel-title">Monthly Spending Overview</h4>
+                                    <p class="showcase-panel-sub">Key metrics for current billing period</p>
+
+                                    <div class="summary-list">
+                                        <div class="summary-item">
+                                            <div class="summary-icon icon-emerald"><i class="fas fa-coins"></i></div>
+                                            <div class="summary-details">
+                                                <div class="summary-name">Daily Average Spend</div>
+                                                <div class="summary-desc">Consistent across 30 days</div>
+                                            </div>
+                                            <div class="summary-value">$38.06 / day</div>
+                                        </div>
+
+                                        <div class="summary-item">
+                                            <div class="summary-icon icon-rose"><i class="fas fa-fire"></i></div>
+                                            <div class="summary-details">
+                                                <div class="summary-name">Highest Spending Category</div>
+                                                <div class="summary-desc">Food & Groceries (32.4%)</div>
+                                            </div>
+                                            <div class="summary-value">$921.90</div>
+                                        </div>
+
+                                        <div class="summary-item">
+                                            <div class="summary-icon icon-indigo"><i class="fas fa-receipt"></i></div>
+                                            <div class="summary-details">
+                                                <div class="summary-name">Total Recorded Entries</div>
+                                                <div class="summary-desc">Active monthly ledger count</div>
+                                            </div>
+                                            <div class="summary-value">48 entries</div>
+                                        </div>
+
+                                        <div class="summary-item">
+                                            <div class="summary-icon icon-blue"><i class="fas fa-file-pdf"></i></div>
+                                            <div class="summary-details">
+                                                <div class="summary-name">Statement Readiness</div>
+                                                <div class="summary-desc">Reconciled and ready to export</div>
+                                            </div>
+                                            <div class="summary-value text-emerald">100% Ready</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 2: Expense Category Breakdown -->
+                        <div class="tab-view" id="tab-categories">
+                            <div class="tab-grid-categories">
+                                <!-- Doughnut Chart Mockup -->
+                                <div class="showcase-panel text-center">
+                                    <h4 class="showcase-panel-title">Category Distribution</h4>
+                                    <p class="showcase-panel-sub">Relative weight of monthly expense categories</p>
+                                    
+                                    <div class="doughnut-center-wrap">
+                                        <svg class="doughnut-svg" width="180" height="180" viewBox="0 0 42 42">
+                                            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#F1F4F9" stroke-width="4.5"></circle>
+                                            <!-- Food: 32% (stroke-dasharray="32 68", offset="25") -->
+                                            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#F97316" stroke-width="4.5" stroke-dasharray="32 68" stroke-dashoffset="25"></circle>
+                                            <!-- Housing/Bills: 28% -->
+                                            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#635BFF" stroke-width="4.5" stroke-dasharray="28 72" stroke-dashoffset="93"></circle>
+                                            <!-- Transport: 18% -->
+                                            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#3B82F6" stroke-width="4.5" stroke-dasharray="18 82" stroke-dashoffset="65"></circle>
+                                            <!-- Shopping: 12% -->
+                                            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#EC4899" stroke-width="4.5" stroke-dasharray="12 88" stroke-dashoffset="47"></circle>
+                                            <!-- Health: 10% -->
+                                            <circle cx="21" cy="21" r="15.9" fill="transparent" stroke="#17B890" stroke-width="4.5" stroke-dasharray="10 90" stroke-dashoffset="35"></circle>
+                                        </svg>
+                                        <div class="doughnut-center-text">
+                                            <div class="d-total">$2,845.50</div>
+                                            <div class="d-sub">Total Spent</div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Category Details Bars -->
+                                <div class="showcase-panel">
+                                    <h4 class="showcase-panel-title">Detailed Category Allocation</h4>
+                                    <p class="showcase-panel-sub">Ranked by total monthly spending</p>
+
+                                    <div class="cat-progress-list">
+                                        <div class="cat-bar-item">
+                                            <div class="cat-bar-header">
+                                                <span><strong style="color: #F97316;">●</strong> Food & Groceries</span>
+                                                <span><strong>$921.90</strong> (32.4%)</span>
+                                            </div>
+                                            <div class="cat-bar-track"><div class="cat-bar-fill" style="width: 32.4%; background: #F97316;"></div></div>
+                                        </div>
+
+                                        <div class="cat-bar-item">
+                                            <div class="cat-bar-header">
+                                                <span><strong style="color: #635BFF;">●</strong> Bills & Housing</span>
+                                                <span><strong>$796.74</strong> (28.0%)</span>
+                                            </div>
+                                            <div class="cat-bar-track"><div class="cat-bar-fill" style="width: 28.0%; background: #635BFF;"></div></div>
+                                        </div>
+
+                                        <div class="cat-bar-item">
+                                            <div class="cat-bar-header">
+                                                <span><strong style="color: #3B82F6;">●</strong> Transportation</span>
+                                                <span><strong>$512.19</strong> (18.0%)</span>
+                                            </div>
+                                            <div class="cat-bar-track"><div class="cat-bar-fill" style="width: 18.0%; background: #3B82F6;"></div></div>
+                                        </div>
+
+                                        <div class="cat-bar-item">
+                                            <div class="cat-bar-header">
+                                                <span><strong style="color: #EC4899;">●</strong> Shopping & Discretionary</span>
+                                                <span><strong>$341.46</strong> (12.0%)</span>
+                                            </div>
+                                            <div class="cat-bar-track"><div class="cat-bar-fill" style="width: 12.0%; background: #EC4899;"></div></div>
+                                        </div>
+
+                                        <div class="cat-bar-item">
+                                            <div class="cat-bar-header">
+                                                <span><strong style="color: #17B890;">●</strong> Healthcare & Wellness</span>
+                                                <span><strong>$284.55</strong> (10.0%)</span>
+                                            </div>
+                                            <div class="cat-bar-track"><div class="cat-bar-fill" style="width: 10.0%; background: #17B890;"></div></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: Recent Transactions Table -->
+                        <div class="tab-view" id="tab-transactions">
+                            <div class="showcase-panel">
+                                <div class="table-toolbar">
+                                    <div class="search-input-fake">
+                                        <i class="fas fa-search"></i>
+                                        <span>Search records by description...</span>
+                                    </div>
+                                    <div class="toolbar-pills">
+                                        <span class="t-pill active">All Categories</span>
+                                        <span class="t-pill">Food</span>
+                                        <span class="t-pill">Bills</span>
+                                        <span class="t-pill">Transport</span>
+                                    </div>
+                                </div>
+
+                                <div class="table-responsive">
+                                    <table class="showcase-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Description</th>
+                                                <th>Category</th>
+                                                <th>Amount</th>
+                                                <th style="text-align: right;">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Nov 10, 2026</td>
+                                                <td><span class="tx-merchant">Whole Foods Organic Groceries</span></td>
+                                                <td><span class="cat-pill food"><i class="fas fa-utensils"></i> Food</span></td>
+                                                <td class="amount-col negative">-$64.20</td>
+                                                <td style="text-align: right;"><span class="badge-status-cleared">Cleared</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Nov 09, 2026</td>
+                                                <td><span class="tx-merchant">Electric Utility Monthly Bill</span></td>
+                                                <td><span class="cat-pill bills"><i class="fas fa-bolt"></i> Bills</span></td>
+                                                <td class="amount-col negative">-$85.00</td>
+                                                <td style="text-align: right;"><span class="badge-status-cleared">Cleared</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Nov 08, 2026</td>
+                                                <td><span class="tx-merchant">Shell Mobility Commute Refill</span></td>
+                                                <td><span class="cat-pill transport"><i class="fas fa-car"></i> Transport</span></td>
+                                                <td class="amount-col negative">-$38.50</td>
+                                                <td style="text-align: right;"><span class="badge-status-cleared">Cleared</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Nov 07, 2026</td>
+                                                <td><span class="tx-merchant">Amazon Tech Accessories & Cables</span></td>
+                                                <td><span class="cat-pill shopping"><i class="fas fa-bag-shopping"></i> Shopping</span></td>
+                                                <td class="amount-col negative">-$42.99</td>
+                                                <td style="text-align: right;"><span class="badge-status-cleared">Cleared</span></td>
+                                            </tr>
+                                            <tr>
+                                                <td>Nov 06, 2026</td>
+                                                <td><span class="tx-merchant">Pharmacy Prescription & Vitamins</span></td>
+                                                <td><span class="cat-pill health"><i class="fas fa-heart-pulse"></i> Health</span></td>
+                                                <td class="amount-col negative">-$26.40</td>
+                                                <td style="text-align: right;"><span class="badge-status-cleared">Cleared</span></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 4: Budget Goal Tracking -->
+                        <div class="tab-view" id="tab-budget">
+                            <div class="tab-grid-budget">
+                                <div class="showcase-panel">
+                                    <h4 class="showcase-panel-title">Active Monthly Budget Tracker</h4>
+                                    <p class="showcase-panel-sub">Real-time comparison of current spending vs predefined spending limits</p>
+
+                                    <div class="budget-card-featured">
+                                        <div class="budget-card-head">
+                                            <div>
+                                                <div class="budget-name">November 2026 Global Budget</div>
+                                                <div class="budget-period">1st – 30th November (23 days elapsed)</div>
+                                            </div>
+                                            <span class="budget-badge-pill on-target">
+                                                <i class="fas fa-circle-check"></i> 81.3% Utilized
+                                            </span>
+                                        </div>
+
+                                        <div class="budget-meter-wrap">
+                                            <div class="budget-meter-track">
+                                                <div class="budget-meter-fill" style="width: 81.3%;"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="budget-details-grid">
+                                            <div class="b-detail-box">
+                                                <span class="b-title">Monthly Cap</span>
+                                                <span class="b-val">$3,500.00</span>
+                                            </div>
+                                            <div class="b-detail-box">
+                                                <span class="b-title">Total Outflow</span>
+                                                <span class="b-val text-indigo">$2,845.50</span>
+                                            </div>
+                                            <div class="b-detail-box">
+                                                <span class="b-title">Safe Remaining</span>
+                                                <span class="b-val text-emerald">+$654.50</span>
+                                            </div>
+                                            <div class="b-detail-box">
+                                                <span class="b-title">Daily Allowance</span>
+                                                <span class="b-val">$93.50 / day</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="showcase-panel">
+                                    <h4 class="showcase-panel-title">Pacing & Budget Recommendations</h4>
+                                    <p class="showcase-panel-sub">Algorithmic pacing tips based on current transaction history</p>
+
+                                    <div class="budget-tips-list">
+                                        <div class="tip-item">
+                                            <i class="fas fa-circle-check text-emerald tip-icon"></i>
+                                            <div>
+                                                <strong>Spending Under Ceiling:</strong>
+                                                You are currently $120.00 under your planned 23-day run rate.
+                                            </div>
+                                        </div>
+                                        <div class="tip-item">
+                                            <i class="fas fa-info-circle text-indigo tip-icon"></i>
+                                            <div>
+                                                <strong>7 Days Remaining:</strong>
+                                                Allocating up to $93.50/day will keep you safely within your monthly target.
+                                            </div>
+                                        </div>
+                                        <div class="tip-item">
+                                            <i class="fas fa-file-export text-emerald tip-icon"></i>
+                                            <div>
+                                                <strong>Instant Statement Export:</strong>
+                                                Download a structured PDF statement at the end of the month with one click.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ Section F: Why Choose ExpenseFlow? ══ -->
+        <section class="section why-us-section" id="about">
+            <div class="container">
+                <div class="section-heading-center">
+                    <span class="section-eyebrow">
+                        <i class="fas fa-award"></i> The ExpenseFlow Advantage
+                    </span>
+                    <h2 class="section-title">
+                        Why Choose ExpenseFlow?
+                    </h2>
+                    <p class="section-subtitle">
+                        Built for individuals and professionals who want reliable financial tracking without clunky spreadsheets, privacy invasions, or hidden complexity.
+                    </p>
+                </div>
+
+                <div class="why-us-grid">
+                    <!-- Point 1 -->
+                    <div class="why-card reveal-item">
+                        <div class="why-icon-wrap icon-indigo">
+                            <i class="fas fa-wand-magic-sparkles"></i>
+                        </div>
+                        <h3 class="why-card-title">Simple and Intuitive Interface</h3>
+                        <p class="why-card-text">
+                            A streamlined, distraction-free design that allows you to log an expense or check your monthly budget in seconds, with zero learning curve.
+                        </p>
+                    </div>
+
+                    <!-- Point 2 -->
+                    <div class="why-card reveal-item">
+                        <div class="why-icon-wrap icon-emerald">
+                            <i class="fas fa-folder-tree"></i>
+                        </div>
+                        <h3 class="why-card-title">Organized Financial Tracking</h3>
+                        <p class="why-card-text">
+                            Structured categorization, clean transaction descriptions, and instant search capabilities keep all your financial records orderly and audit-ready.
+                        </p>
+                    </div>
+
+                    <!-- Point 3 -->
+                    <div class="why-card reveal-item">
+                        <div class="why-icon-wrap icon-purple">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <h3 class="why-card-title">Better Spending Awareness</h3>
+                        <p class="why-card-text">
+                            Interactive visual charts and category breakdowns give you immediate clarity on where your money goes, helping you curb unneeded expenses.
+                        </p>
+                    </div>
+
+                    <!-- Point 4 -->
+                    <div class="why-card reveal-item">
+                        <div class="why-icon-wrap icon-blue">
+                            <i class="fas fa-mobile-screen-button"></i>
+                        </div>
+                        <h3 class="why-card-title">Accessible Across Devices</h3>
+                        <p class="why-card-text">
+                            Engineered with a responsive, mobile-first architecture that works seamlessly across smartphones, tablets, laptops, and large desktop screens.
+                        </p>
+                    </div>
+
+                    <!-- Point 5 -->
+                    <div class="why-card reveal-item">
+                        <div class="why-icon-wrap icon-amber">
+                            <i class="fas fa-user-shield"></i>
+                        </div>
+                        <h3 class="why-card-title">Secure Account-Based Access</h3>
+                        <p class="why-card-text">
+                            Your financial records belong exclusively to you. Every account is protected by salted PBKDF2 password hashing, email verification, and complete user data isolation.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Metrics Callout Strip -->
+                <div class="metric-strip-card reveal-item">
+                    <div class="metric-strip-item">
+                        <div class="metric-strip-val">100%</div>
+                        <div class="metric-strip-lbl">Private User Data Isolation</div>
+                    </div>
+                    <div class="metric-strip-divider"></div>
+                    <div class="metric-strip-item">
+                        <div class="metric-strip-val">&lt; 2 min</div>
+                        <div class="metric-strip-lbl">Average Account Setup Time</div>
+                    </div>
+                    <div class="metric-strip-divider"></div>
+                    <div class="metric-strip-item">
+                        <div class="metric-strip-val">2 Formats</div>
+                        <div class="metric-strip-lbl">Instant PDF & CSV Exports</div>
+                    </div>
+                    <div class="metric-strip-divider"></div>
+                    <div class="metric-strip-item">
+                        <div class="metric-strip-val">$0.00</div>
+                        <div class="metric-strip-lbl">Free To Track & Manage</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ══ Section G: Call-to-Action Section ══ -->
+        <section class="section cta-section" id="cta">
+            <div class="container">
+                <div class="cta-banner-card reveal-item">
+                    <div class="cta-glow-backdrop" aria-hidden="true"></div>
+                    <div class="cta-content-wrapper">
+                        <div class="cta-pill-tag">
+                            <i class="fas fa-wand-magic-sparkles"></i> Start Free Today
+                        </div>
+                        <h2 class="cta-title">
+                            Your Financial Clarity Starts Today.
+                        </h2>
+                        <p class="cta-description">
+                            Start tracking your money, understanding your spending, and building better financial habits.
+                        </p>
+                        <div class="cta-action-btn-wrap">
+                            <a href="/register" class="btn btn-cta-main">
+                                <span>Get Started for Free</span>
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                        <div class="cta-guarantee-note">
+                            <span><i class="fas fa-check-circle"></i> Free Account</span>
+                            <span>&bull;</span>
+                            <span><i class="fas fa-check-circle"></i> Quick Email Setup</span>
+                            <span>&bull;</span>
+                            <span><i class="fas fa-check-circle"></i> No Credit Card Required</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ══ Section H: Footer ══ -->
+    <footer class="footer-wrapper">
+        <div class="container">
+            <div class="footer-grid">
+                <!-- Column 1: Brand & Bio -->
+                <div class="footer-brand-col">
+                    <a href="#home" class="brand-logo" aria-label="ExpenseFlow Home">
+                        <div class="brand-logo-icon">
+                            <img src="/static/img/logo.png" alt="ExpenseFlow Logo" class="brand-logo-img">
+                        </div>
+                        <span class="brand-name">Expense<span class="brand-highlight">Flow</span></span>
+                    </a>
+                    <p class="footer-description">
+                        ExpenseFlow is a modern personal finance tracking application designed to help you track daily expenses, visualize spending trends, and manage your budget with confidence.
+                    </p>
+                    <div class="system-status-indicator">
+                        <span class="status-pulse-dot"></span>
+                        <span class="status-text">All Systems Operational</span>
+                    </div>
+                </div>
+
+                <!-- Column 2: Quick Navigation -->
+                <div class="footer-nav-col">
+                    <h4 class="footer-col-title">Navigation</h4>
+                    <ul class="footer-link-list">
+                        <li><a href="#home">Home</a></li>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#how-it-works">How It Works</a></li>
+                        <li><a href="#dashboard-preview">Dashboard Preview</a></li>
+                        <li><a href="#about">About ExpenseFlow</a></li>
+                    </ul>
+                </div>
+
+                <!-- Column 3: Account & Access -->
+                <div class="footer-nav-col">
+                    <h4 class="footer-col-title">Account</h4>
+                    <ul class="footer-link-list">
+                        <li><a href="/login">Login to Account</a></li>
+                        <li><a href="/register">Create Free Account</a></li>
+                        <li><a href="/login">Forgot Password</a></li>
+                        {% if current_user.is_authenticated %}
+                        <li><a href="/dashboard">Open Dashboard</a></li>
+                        <li><a href="/logout">Log Out</a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+
+                <!-- Column 4: Legal & Contact -->
+                <div class="footer-nav-col">
+                    <h4 class="footer-col-title">Legal & Support</h4>
+                    <ul class="footer-link-list">
+                        <li><button class="footer-modal-trigger" id="open-contact-modal">Contact & Support</button></li>
+                        <li><button class="footer-modal-trigger" id="open-privacy-modal">Privacy Policy</button></li>
+                        <li><button class="footer-modal-trigger" id="open-terms-modal">Terms and Conditions</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Bottom Copyright Bar -->
+            <div class="footer-bottom-bar">
+                <div class="copyright-text">
+                    © 2026 ExpenseFlow. All rights reserved.
+                </div>
+                <div class="footer-meta-notes">
+                    <span>Designed for personal wealth clarity</span>
+                    <span>&bull;</span>
+                    <span>Built with Modern web standards</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ══ Interactive Modals (Accessible & Fully Functional) ══ -->
+
+    <!-- Contact Modal -->
+    <div class="modal-backdrop" id="contact-modal" aria-hidden="true" role="dialog" aria-labelledby="contact-modal-title">
+        <div class="modal-dialog">
+            <div class="modal-header">
+                <div class="modal-header-text">
+                    <h3 id="contact-modal-title">Contact & Support</h3>
+                    <p>Have questions or feedback? We'd love to hear from you.</p>
+                </div>
+                <button class="modal-close-btn" id="close-contact-modal" aria-label="Close dialog">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="contact-feedback" class="modal-alert-box" style="display: none;"></div>
+                <form id="contact-form" class="modal-form">
+                    <div class="form-group">
+                        <label for="contact-name">Full Name</label>
+                        <input type="text" id="contact-name" name="name" placeholder="John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-email">Email Address</label>
+                        <input type="email" id="contact-email" name="email" placeholder="name@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-subject">Topic</label>
+                        <select id="contact-subject" name="subject">
+                            <option value="General Question">General Inquiry</option>
+                            <option value="Feature Feedback">Feature Suggestion</option>
+                            <option value="Account Support">Account & Authentication</option>
+                            <option value="Bug Report">Issue or Bug Report</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="contact-message">Your Message</label>
+                        <textarea id="contact-message" name="message" rows="4" placeholder="How can we help you?" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full" id="contact-submit-btn">
+                        <i class="fas fa-paper-plane"></i> Send Message
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
-    <!-- ═══ Delete Confirmation Modal ═══ -->
-    <div class="modal-overlay" id="delete-modal-overlay">
-        <div class="modal modal-small" id="delete-modal">
-            <div class="modal-header delete-header">
-                <h2><i class="fas fa-exclamation-triangle"></i> Delete Expense</h2>
-                <button class="modal-close" id="delete-modal-close">
-                    <i class="fas fa-times"></i>
-                </button>
+    <!-- Privacy Policy Modal -->
+    <div class="modal-backdrop" id="privacy-modal" aria-hidden="true" role="dialog" aria-labelledby="privacy-modal-title">
+        <div class="modal-dialog modal-dialog-lg">
+            <div class="modal-header">
+                <div class="modal-header-text">
+                    <h3 id="privacy-modal-title">Privacy Policy</h3>
+                    <p>Last updated: November 2026</p>
+                </div>
+                <button class="modal-close-btn" id="close-privacy-modal" aria-label="Close dialog">&times;</button>
             </div>
-            <div class="modal-body-text">
-                <p>Are you sure you want to delete this expense? This action cannot be undone.</p>
+            <div class="modal-body modal-scrollable-text">
+                <h4>1. Information We Collect</h4>
+                <p>When you create an ExpenseFlow account, we collect your name, email address, and encrypted password hash. When you use the application, you voluntarily enter financial transaction records including dates, amounts, categories, and descriptions.</p>
+                
+                <h4>2. How Your Data Is Protected</h4>
+                <p>We believe financial records belong solely to their owner. ExpenseFlow implements strict user-level data isolation. Passwords are securely hashed with PBKDF2 before storage. We do not sell, rent, or monetize your transaction data to advertisers or third parties.</p>
+
+                <h4>3. Email Communication</h4>
+                <p>Your email is used strictly for authentication, account confirmation tokens, password reset links, and scheduled monthly PDF expense summaries if requested.</p>
+
+                <h4>4. Data Ownership & Deletion</h4>
+                <p>You maintain full ownership of all data entered into ExpenseFlow. You may edit, update, delete individual transaction records, or export your complete financial ledger at any time via CSV or PDF.</p>
             </div>
-            <div class="form-actions">
-                <button type="button" class="btn-secondary" id="btn-cancel-delete">Cancel</button>
-                <button type="button" class="btn-danger" id="btn-confirm-delete">
-                    <i class="fas fa-trash"></i> Delete
-                </button>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="close-privacy-btn">Close</button>
             </div>
         </div>
     </div>
 
-    <!-- ═══ Toast Notification ═══ -->
-    <div class="toast-container" id="toast-container"></div>
+    <!-- Terms and Conditions Modal -->
+    <div class="modal-backdrop" id="terms-modal" aria-hidden="true" role="dialog" aria-labelledby="terms-modal-title">
+        <div class="modal-dialog modal-dialog-lg">
+            <div class="modal-header">
+                <div class="modal-header-text">
+                    <h3 id="terms-modal-title">Terms and Conditions</h3>
+                    <p>Last updated: November 2026</p>
+                </div>
+                <button class="modal-close-btn" id="close-terms-modal" aria-label="Close dialog">&times;</button>
+            </div>
+            <div class="modal-body modal-scrollable-text">
+                <h4>1. Acceptance of Terms</h4>
+                <p>By creating an account or accessing the ExpenseFlow platform, you agree to these Terms and Conditions. If you do not agree, please do not use the application.</p>
 
-    <!-- App Script -->
-    <script src="/static/js/app.js"></script>
+                <h4>2. Nature of Service</h4>
+                <p>ExpenseFlow provides personal expense tracking, budget visualization, and statement generation tools. ExpenseFlow is not a bank, broker-dealer, or licensed tax advisor. The calculations, charts, and budget pacing tools are provided for informational and personal budgeting purposes only.</p>
+
+                <h4>3. Account Security</h4>
+                <p>You are responsible for maintaining the confidentiality of your login credentials and for all activities that occur under your account. Notify support immediately if you suspect unauthorized access.</p>
+
+                <h4>4. Responsible Use</h4>
+                <p>You agree not to misuse the platform, attempt unauthorized API access, reverse-engineer proprietary components, or disrupt services for other users.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary btn-sm" id="close-terms-btn">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Landing Page Scripts -->
+    <script src="/static/js/landing.js"></script>
 </body>
 
 </html>

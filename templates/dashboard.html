@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="ExpenseFlow — Track, analyze, and manage your expenses with beautiful charts, budgets, and insights.">
+    <title>ExpenseFlow — Smart Expense Tracker</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/static/img/favicon.png">
+    <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- App Styles -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- Early Theme Initialization to prevent flicker -->
+    <script>
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('expenseflow_theme') || 'dark';
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            } catch (e) {}
+        })();
+    </script>
+</head>
+
+<body>
+
+    <!-- ═══ Mobile Sidebar Backdrop Overlay ═══ -->
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- ═══ Sidebar ═══ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <div class="logo-icon">
+                    <img src="/static/img/logo.png" alt="ExpenseFlow Logo" class="app-logo-img">
+                </div>
+                <span class="logo-text">ExpenseFlow</span>
+            </div>
+        </div>
+
+        <!-- Logged in User Profile Info -->
+        <div class="sidebar-user" id="sidebar-user">
+            <div class="sidebar-user-avatar" id="sidebar-user-avatar">
+                {{ current_user.full_name[:2].upper() if current_user.full_name else 'US' }}
+            </div>
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-name" id="sidebar-user-name">
+                    {{ current_user.full_name or 'User' }}
+                </div>
+                <div class="sidebar-user-email" id="sidebar-user-email">
+                    {{ current_user.email or '' }}
+                </div>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a href="/dashboard" class="nav-item active" data-view="dashboard" id="nav-dashboard">
+                <i class="fas fa-chart-pie"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-view="expenses" id="nav-expenses">
+                <i class="fas fa-receipt"></i>
+                <span>Expenses</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+           
+            <!-- Export Buttons -->
+            <button class="btn-sidebar-action btn-export" id="btn-export" title="Export as CSV">
+                <i class="fas fa-file-csv" style="color: #10b981;"></i>
+                <span>Export CSV</span>
+            </button>
+            <button class="btn-sidebar-action btn-export" id="btn-export-pdf" title="Export Monthly PDF Report">
+                <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
+                <span>Export PDF</span>
+            </button>
+            <a href="/logout" class="btn-sidebar-action btn-logout" id="btn-logout" title="Log Out" style="text-decoration: none;">
+                <i class="fas fa-sign-out-alt"></i>
+                <span>Log Out</span>
+            </a>
+        </div>
+    </aside>
+
+    <!-- ═══ Mobile Header ═══ -->
+    <header class="mobile-header">
+        <button class="menu-toggle" id="menu-toggle" title="Toggle Navigation">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="logo">
+            <div class="logo-icon small">
+                <img src="/static/img/logo.png" alt="ExpenseFlow Logo" class="app-logo-img">
+            </div>
+            <span class="logo-text">ExpenseFlow</span>
+        </div>
+        <button class="btn-add-mobile" id="btn-add-mobile" title="Add Expense">
+            <i class="fas fa-plus"></i>
+        </button>
+    </header>
+
+    <!-- ═══ Main Content ═══ -->
+    <main class="main-content">
+
+        <!-- Top Greeting Bar -->
+        <div class="top-nav-bar">
+            <div class="top-greeting">
+                <h2 id="greeting-text">Welcome back, {{ current_user.full_name or 'there' }}! 👋</h2>
+                <p id="current-date-text">Loading today's date...</p>
+            </div>
+            <div class="top-actions">
+                 <!-- Theme Toggle -->
+                <button class="btn-theme-toggle" id="btn-theme-toggle" type="button" title="Switch Theme">
+                    <span style="display: flex; align-items: center; gap: 0.5rem; pointer-events: none;">
+                        <i class="fas fa-moon" id="theme-icon"></i>
+                        <span id="theme-label">Dark Mode</span>
+                    </span>
+                    <span class="theme-status-chip" id="theme-status-chip" style="pointer-events: none;">Dark</span>
+                </button>
+                <button class="btn-secondary" id="btn-top-shortcuts" type="button" onclick="openShortcutsModal()" title="Keyboard Shortcuts">
+                    <i class="fas fa-keyboard"></i>
+                    <span>Shortcuts</span>
+                    <span class="kbd-shortcut">?</span>
+                </button>
+                <button class="btn-primary" id="btn-top-add">
+                    <i class="fas fa-plus"></i>
+                    <span > Add Expense</span>
+                    <span class="kbd-shortcut" style="background: rgba(255,255,255,0.2); color: #fff;">N</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- ── Dashboard View ── -->
+        <section class="view active" id="view-dashboard">
+            <div class="view-header">
+                <div>
+                    <h1>Dashboard</h1>
+                    <p class="subtitle">Your spending overview, insights, and budget tracking</p>
+                </div>
+                <!-- <button class="btn-primary" id="btn-add-expense">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Expense</span>
+                </button> -->
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card" id="stat-total">
+                    <div class="stat-icon total">
+                        <i class="fas fa-coins"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Spent</span>
+                        <span class="stat-value" id="stat-total-value">$0.00</span>
+                    </div>
+                </div>
+                <div class="stat-card" id="stat-monthly">
+                    <div class="stat-icon monthly">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">This Month</span>
+                        <span class="stat-value" id="stat-monthly-value">$0.00</span>
+                        <span class="stat-subtext" id="stat-monthly-planned" style="display:none; font-size:0.75rem; color:#f59e0b; margin-top:2px;">Planned: $0.00</span>
+                    </div>
+                </div>
+                <div class="stat-card" id="stat-daily">
+                    <div class="stat-icon daily">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Daily Average</span>
+                        <span class="stat-value" id="stat-daily-value">$0.00</span>
+                    </div>
+                </div>
+                <div class="stat-card" id="stat-top">
+                    <div class="stat-icon top">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-label">Top Category</span>
+                        <span class="stat-value" id="stat-top-value">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monthly Budget Goal Card -->
+            <div class="budget-card" id="budget-card">
+                <div class="budget-header">
+                    <div class="budget-header-title">
+                        <i class="fas fa-bullseye"></i>
+                        <div>
+                            <h3>Monthly Budget Tracker</h3>
+                            <span style="font-size: 0.8rem; color: var(--text-secondary);" id="budget-month-label">Current Month</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span class="budget-badge normal" id="budget-status-badge">On Track</span>
+                        <button class="btn-edit-budget" id="btn-edit-budget" type="button" onclick="openBudgetModal()" title="Adjust Budget Limit">
+                            <i class="fas fa-sliders-h"></i>
+                            <span>Adjust Budget</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="budget-progress-container">
+                    <div class="budget-progress-fill" id="budget-progress-fill" style="width: 0%;"></div>
+                </div>
+
+                <!-- Budget Details -->
+                <div class="budget-details">
+                    <div>
+                        <div class="budget-metric-label">Monthly Budget</div>
+                        <div class="budget-metric-value" id="budget-limit-val">$1,000.00</div>
+                        <div class="budget-metric-sub">Target spending ceiling</div>
+                    </div>
+                    <div>
+                        <div class="budget-metric-label">Spent This Month</div>
+                        <div class="budget-metric-value" id="budget-spent-val" style="color: var(--danger);">$0.00</div>
+                        <div class="budget-metric-sub" id="budget-percent-sub">0% of budget used</div>
+                    </div>
+                    <div>
+                        <div class="budget-metric-label">Remaining Safe</div>
+                        <div class="budget-metric-value" id="budget-remaining-val" style="color: var(--success);">$1,000.00</div>
+                        <div class="budget-metric-sub">Available to spend</div>
+                    </div>
+                    <div>
+                        <div class="budget-metric-label">Daily Allowance</div>
+                        <div class="budget-metric-value" id="budget-daily-allowance" style="color: var(--info);">$0.00 / day</div>
+                        <div class="budget-metric-sub" id="budget-days-left-sub">Calculating...</div>
+                    </div>
+                </div>
+
+                <!-- Pacing & Budget Recommendations Section -->
+                <div class="budget-pacing-panel" id="budget-pacing-panel">
+                    <div class="pacing-panel-header">
+                        <i class="fas fa-chart-line"></i>
+                        <h4>Pacing &amp; Budget Recommendations</h4>
+                        <span class="pacing-badge-auto">Live Run-Rate Calculation</span>
+                    </div>
+                    <div class="pacing-tips-grid">
+                        <div class="pacing-tip-card" id="pacing-pace-tip">
+                            <div class="tip-icon-box" id="pacing-icon-pace"><i class="fas fa-circle-check" style="color: var(--success);"></i></div>
+                            <div class="tip-content">
+                                <strong id="pacing-title-pace">Spending Under Ceiling:</strong>
+                                <span id="pacing-desc-pace">You are currently on track for the month.</span>
+                            </div>
+                        </div>
+                        <div class="pacing-tip-card" id="pacing-remaining-tip">
+                            <div class="tip-icon-box" id="pacing-icon-days"><i class="fas fa-calendar-day" style="color: var(--info);"></i></div>
+                            <div class="tip-content">
+                                <strong id="pacing-title-days">Days Remaining:</strong>
+                                <span id="pacing-desc-days">Calculating safe daily pacing...</span>
+                            </div>
+                        </div>
+                        <div class="pacing-tip-card pacing-tip-action" id="pacing-export-card">
+                            <div class="tip-icon-box"><i class="fas fa-file-pdf" style="color: var(--danger);"></i></div>
+                            <div class="tip-content">
+                                <strong>Instant Statement Export:</strong>
+                                <span>Download a structured monthly PDF report anytime.</span>
+                            </div>
+                            <button type="button" class="btn-pacing-export" id="btn-pacing-pdf-export" title="Export this month's PDF report">
+                                <i class="fas fa-download"></i> PDF
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-chart-area"></i> Spending Trend</h3>
+                        <span class="chart-badge">Last 30 Days</span>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-chart-pie"></i> Category Breakdown</h3>
+                        <span class="chart-badge">All Time</span>
+                    </div>
+                    <div class="chart-body chart-body-donut">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Expenses -->
+            <div class="recent-card">
+                <div class="chart-header">
+                    <h3><i class="fas fa-clock"></i> Recent Expenses</h3>
+                    <a href="#" class="view-all-link" id="view-all-link">View All <i class="fas fa-arrow-right"></i></a>
+                </div>
+                <div class="recent-list" id="recent-list">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Expenses View ── -->
+        <section class="view" id="view-expenses">
+            <div class="view-header">
+                <div>
+                    <h1>Expenses</h1>
+                    <p class="subtitle">Search, filter, categorize, and manage all your expense records</p>
+                </div>
+                <!-- <button class="btn-primary" id="btn-add-expense-2">
+                    <i class="fas fa-plus"></i>
+                    <span>Add Expense</span>
+                </button> -->
+            </div>
+
+            <!-- Summary Strip -->
+            <div class="expenses-summary-strip">
+                <div class="summary-strip-card">
+                    <div class="summary-strip-icon blue">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <div>
+                        <div class="summary-strip-label">Filtered Total</div>
+                        <div class="summary-strip-value" id="summary-filtered-total">$0.00</div>
+                    </div>
+                </div>
+                <div class="summary-strip-card">
+                    <div class="summary-strip-icon purple">
+                        <i class="fas fa-receipt"></i>
+                    </div>
+                    <div>
+                        <div class="summary-strip-label">Transactions</div>
+                        <div class="summary-strip-value" id="summary-filtered-count">0</div>
+                    </div>
+                </div>
+                <div class="summary-strip-card">
+                    <div class="summary-strip-icon green">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div>
+                        <div class="summary-strip-label">Avg Transaction</div>
+                        <div class="summary-strip-value" id="summary-filtered-avg">$0.00</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Category Pills Bar -->
+            <div class="category-pills-bar">
+                <div class="category-pills-scroll" id="category-pills-scroll">
+                    <button class="category-pill active" data-category="All">
+                        <i class="fas fa-border-all"></i> All Categories
+                    </button>
+                    <button class="category-pill" data-category="Food">
+                        <i class="fas fa-utensils" style="color: var(--cat-food);"></i> Food
+                    </button>
+                    <button class="category-pill" data-category="Transport">
+                        <i class="fas fa-car" style="color: var(--cat-transport);"></i> Transport
+                    </button>
+                    <button class="category-pill" data-category="Shopping">
+                        <i class="fas fa-bag-shopping" style="color: var(--cat-shopping);"></i> Shopping
+                    </button>
+                    <button class="category-pill" data-category="Bills">
+                        <i class="fas fa-file-invoice" style="color: var(--cat-bills);"></i> Bills
+                    </button>
+                    <button class="category-pill" data-category="Entertainment">
+                        <i class="fas fa-film" style="color: var(--cat-entertainment);"></i> Entertainment
+                    </button>
+                    <button class="category-pill" data-category="Health">
+                        <i class="fas fa-heartbeat" style="color: var(--cat-health);"></i> Health
+                    </button>
+                    <button class="category-pill" data-category="Education">
+                        <i class="fas fa-graduation-cap" style="color: var(--cat-education);"></i> Education
+                    </button>
+                    <button class="category-pill" data-category="Other">
+                        <i class="fas fa-box" style="color: var(--cat-other);"></i> Other
+                    </button>
+                </div>
+            </div>
+
+            <!-- Filters Bar -->
+            <div class="filters-bar">
+                <div class="filter-group">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="search-input" placeholder="Search description, notes... (Press '/' to focus)">
+                        <button class="btn-clear-search" id="btn-clear-search" title="Clear Search">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <!-- Quick Date Presets -->
+                    <div class="date-presets">
+                        <button class="btn-preset active" data-preset="all">All</button>
+                        <button class="btn-preset" data-preset="this-month">This Month</button>
+                        <button class="btn-preset" data-preset="last-30">Last 30 Days</button>
+                        <button class="btn-preset" data-preset="this-year">This Year</button>
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <select id="filter-category" class="filter-select" title="Category Filter" style="display: none;">
+                        <option value="All">All Categories</option>
+                        <option value="Food">🍕 Food</option>
+                        <option value="Transport">🚗 Transport</option>
+                        <option value="Shopping">🛍️ Shopping</option>
+                        <option value="Bills">📄 Bills</option>
+                        <option value="Entertainment">🎬 Entertainment</option>
+                        <option value="Health">💊 Health</option>
+                        <option value="Education">📚 Education</option>
+                        <option value="Other">📦 Other</option>
+                    </select>
+
+                    <select id="filter-status" class="filter-select" title="Payment Status">
+                        <option value="all">All Statuses</option>
+                        <option value="paid">Paid (Actual)</option>
+                        <option value="planned">Planned (Scheduled)</option>
+                    </select>
+
+                    <input type="date" id="filter-start-date" class="filter-date" title="Start Date">
+                    <span style="color: var(--text-muted); font-size: 0.85rem;">to</span>
+                    <input type="date" id="filter-end-date" class="filter-date" title="End Date">
+
+                    <select id="filter-sort" class="filter-select" title="Sort Order">
+                        <option value="date_desc">Newest First</option>
+                        <option value="date_asc">Oldest First</option>
+                        <option value="amount_desc">Highest Amount</option>
+                        <option value="amount_asc">Lowest Amount</option>
+                    </select>
+
+                    <button class="btn-secondary" id="btn-reset-filters" title="Reset all filters" style="padding: 0.65rem 0.95rem;">
+                        <i class="fas fa-rotate-left"></i>
+                        <span>Reset</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Expenses Table -->
+            <div class="expenses-table-card">
+                <div class="table-responsive">
+                    <table class="expenses-table" id="expenses-table">
+                        <thead>
+                            <tr>
+                                <th class="sortable" data-sort-field="date">Date <i class="fas fa-sort"></i></th>
+                                <th >Category </i></th>
+                                <th >Description </th>
+                                <th>Status</th>
+                                <th class="sortable" data-sort-field="amount">Amount <i class="fas fa-sort"></i></th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expenses-tbody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="table-footer" id="table-footer">
+                    <span class="table-info" id="table-info">Showing 0 expenses</span>
+                    <span class="table-total" id="table-total">Total: $0.00</span>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ═══ Add/Edit Expense Modal ═══ -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal modal-expense-compact" id="expense-modal">
+            <div class="modal-header modal-header-compact">
+                <h2 id="modal-title"><i class="fas fa-plus-circle"></i> Add Expense</h2>
+                <button class="modal-close" id="modal-close" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="expense-form">
+                <input type="hidden" id="expense-id">
+
+                <div class="modal-body-compact">
+                    <!-- Row 1: Amount ($) and Date side-by-side -->
+                    <div class="form-row-2col">
+                        <div class="form-group-compact">
+                            <label for="expense-amount">Amount ($)</label>
+                            <div class="input-icon-wrapper">
+                                <i>$</i>
+                                <input type="number" id="expense-amount" step="0.01" min="0.01" placeholder="0.00" required autofocus>
+                            </div>
+                        </div>
+                        <div class="form-group-compact">
+                            <label for="expense-date">Date</label>
+                            <input type="date" id="expense-date" required>
+                        </div>
+                    </div>
+
+                    <!-- Row 2: Category -->
+                    <div class="form-group-compact">
+                        <label>Category</label>
+                        <div class="category-grid category-grid-compact" id="category-grid">
+                            <label class="category-option">
+                                <input type="radio" name="category" value="Food" checked>
+                                <span class="category-chip food"><i class="fas fa-utensils"></i> Food</span>
+                            </label>
+                            <label class="category-option">
+                                <input type="radio" name="category" value="Transport">
+                                <span class="category-chip transport"><i class="fas fa-car"></i> Transport</span>
+                            </label>
+                            <label class="category-option">
+                                <input type="radio" name="category" value="Shopping">
+                                <span class="category-chip shopping"><i class="fas fa-bag-shopping"></i> Shopping</span>
+                            </label>
+                            <label class="category-option">
+                                <input type="radio" name="category" value="Bills">
+                                <span class="category-chip bills"><i class="fas fa-file-invoice"></i> Bills</span>
+                            </label>
+                            <label class="category-option">
+                                <input type="radio" name="category" value="Entertainment">
+                                <span class="category-chip entertainment"><i class="fas fa-film"></i> Entertainment</span>
+                            </label>
+                            <label class="category-option">
+                                <input type="radio" name="category" value="Health">
+                                <span class="category-chip health"><i class="fas fa-heartbeat"></i> Health</span>
+                            </label>
+                            <label class="category-option">
+                                <input type="radio" name="category" value="Education">
+                                <span class="category-chip education"><i class="fas fa-graduation-cap"></i> Education</span>
+                            </label>
+                            <label class="category-option">
+                                <input type="radio" name="category" value="Other">
+                                <span class="category-chip other"><i class="fas fa-box"></i> Other</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Row 3: Description -->
+                    <div class="form-group-compact">
+                        <label for="expense-description">Description</label>
+                        <input type="text" id="expense-description" placeholder="e.g., Grocery shopping, Netflix, Electricity..." required>
+                    </div>
+
+                    <!-- Row 4: Payment Status (Clean Segmented Pill Control) -->
+                    <div class="form-group-compact">
+                        <label>Payment Status</label>
+                        <div class="status-segmented-control">
+                            <label class="status-segment-option">
+                                <input type="radio" name="expense-status" value="paid" checked>
+                                <span class="status-segment-btn paid">
+                                    <i class="fas fa-circle-check"></i>
+                                    <span>Paid</span>
+                                </span>
+                            </label>
+                            <label class="status-segment-option">
+                                <input type="radio" name="expense-status" value="planned">
+                                <span class="status-segment-btn planned">
+                                    <i class="fas fa-calendar-check"></i>
+                                    <span>Scheduled</span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions form-actions-compact">
+                    <button type="button" class="btn-secondary" id="btn-cancel">Cancel</button>
+                    <button type="submit" class="btn-primary" id="btn-save">
+                        <i class="fas fa-check"></i> Save Expense
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══ Delete Confirmation Modal ═══ -->
+    <div class="modal-overlay" id="delete-modal-overlay">
+        <div class="modal modal-small" id="delete-modal">
+            <div class="modal-header delete-header">
+                <h2><i class="fas fa-exclamation-triangle"></i> Delete Expense</h2>
+                <button class="modal-close" id="delete-modal-close" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body-text">
+                <p>Are you sure you want to delete this expense? This action cannot be undone.</p>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" id="btn-cancel-delete">Cancel</button>
+                <button type="button" class="btn-danger" id="btn-confirm-delete">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Adjust Monthly Budget Modal ═══ -->
+    <div class="modal-overlay" id="budget-modal-overlay">
+        <div class="modal modal-small" id="budget-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-bullseye"></i> Set Monthly Budget</h2>
+                <button class="modal-close" id="budget-modal-close" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="budget-form">
+                <div class="form-group">
+                    <label for="budget-input-amount">Monthly Spending Goal ($)</label>
+                    <div class="input-icon-wrapper">
+                        <i>$</i>
+                        <input type="number" id="budget-input-amount" min="10" placeholder="1000" required>
+                    </div>
+                    <span style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 6px; display: block;">
+                        Your target budget ceiling for the current calendar month.
+                    </span>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="btn-cancel-budget">Cancel</button>
+                    <button type="submit" class="btn-primary" id="btn-save-budget">
+                        <i class="fas fa-check"></i> Save Goal
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══ PDF Export Month/Year Modal ═══ -->
+    <div class="modal-overlay" id="pdf-modal-overlay">
+        <div class="modal modal-small" id="pdf-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-file-pdf" style="color: #ef4444;"></i> Export PDF Report</h2>
+                <button class="modal-close" id="pdf-modal-close" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="form-group" style="padding-top: 1.5rem;">
+                <label for="pdf-select-month">Select Month</label>
+                <select id="pdf-select-month" class="filter-select" style="width: 100%;">
+                    <option value="1">January</option>
+                    <option value="2">February</option>
+                    <option value="3">March</option>
+                    <option value="4">April</option>
+                    <option value="5">May</option>
+                    <option value="6">June</option>
+                    <option value="7">July</option>
+                    <option value="8">August</option>
+                    <option value="9">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="pdf-select-year">Select Year</label>
+                <select id="pdf-select-year" class="filter-select" style="width: 100%;">
+                    <!-- Populated dynamically by JS -->
+                </select>
+            </div>
+            <div class="form-actions">
+                <button type="button" class="btn-secondary" id="btn-cancel-pdf">Cancel</button>
+                <button type="button" class="btn-primary" id="btn-confirm-download-pdf">
+                    <i class="fas fa-download"></i> Download PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Keyboard Shortcuts Sheet Modal ═══ -->
+    <div class="modal-overlay" id="shortcuts-modal-overlay">
+        <div class="modal modal-small" id="shortcuts-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-keyboard"></i> Keyboard Shortcuts</h2>
+                <button class="modal-close" id="shortcuts-modal-close" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body-text" style="display: flex; flex-direction: column; gap: 0.9rem; padding: 1.5rem 1.75rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Add New Expense</span>
+                    <span class="kbd-shortcut">N or +</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Focus Search Box</span>
+                    <span class="kbd-shortcut">/</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Switch to Dashboard</span>
+                    <span class="kbd-shortcut">D</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Switch to Expenses</span>
+                    <span class="kbd-shortcut">E</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Close Any Modal / Dialog</span>
+                    <span class="kbd-shortcut">Esc</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Toggle Theme (Dark / Light)</span>
+                    <span class="kbd-shortcut">T</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Toast Notification Container ═══ -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- App Script -->
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>

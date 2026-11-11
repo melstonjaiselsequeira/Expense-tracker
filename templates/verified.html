@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verified — ExpenseFlow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/static/img/favicon.png">
+    <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Early Theme Initialization to match user preference -->
+    <script>
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('expenseflow_theme') || 'dark';
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            } catch (e) {}
+        })();
+    </script>
+    <style>
+        .verified-card {
+            text-align: center;
+            max-width: 460px;
+        }
+        .verified-badge-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5rem auto;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(16, 185, 129, 0.12);
+            border: 2px solid rgba(16, 185, 129, 0.35);
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.25);
+            animation: pulseSuccess 2s infinite ease-in-out;
+        }
+        .verified-badge-icon i {
+            font-size: 2.75rem;
+            color: #10b981;
+        }
+        .verified-email-pill {
+            display: inline-block;
+            margin: 0.75rem 0;
+            padding: 6px 16px;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            color: var(--accent);
+            border-radius: var(--radius-pill);
+            font-size: 0.9rem;
+            font-weight: 600;
+            word-break: break-all;
+        }
+        @keyframes pulseSuccess {
+            0%, 100% {
+                transform: scale(1);
+                box-shadow: 0 0 25px rgba(16, 185, 129, 0.25);
+            }
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 0 35px rgba(16, 185, 129, 0.4);
+            }
+        }
+        .btn-proceed-login {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.6rem;
+            width: 100%;
+            padding: 0.85rem 1.25rem;
+            background: var(--gradient);
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: var(--radius-sm);
+            text-decoration: none;
+            transition: all 0.25s ease;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+            margin-top: 1.5rem;
+        }
+        .btn-proceed-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.45);
+            color: #ffffff;
+        }
+        .redirect-note {
+            margin-top: 1.25rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card verified-card">
+            <div class="auth-header" style="margin-bottom: 1.5rem;">
+                <a href="/" title="Back to ExpenseFlow Home" style="text-decoration: none; display: inline-block;">
+                    <div class="logo-icon"><img src="/static/img/logo.png" alt="ExpenseFlow Logo" class="app-logo-img"></div>
+                </a>
+            </div>
+
+            <div class="verified-badge-icon">
+                <i class="fas fa-check"></i>
+            </div>
+
+            <h1 style="font-size: 1.85rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-primary);">
+                Email Verified!
+            </h1>
+            
+            {% if email %}
+            <div class="verified-email-pill">
+                <i class="fas fa-envelope-circle-check" style="margin-right: 6px;"></i>{{ email }}
+            </div>
+            {% endif %}
+
+            <p style="font-size: 0.95rem; line-height: 1.6; color: var(--text-secondary); margin: 0.75rem 0 1.25rem 0;">
+                Your account has been successfully verified and activated. You can now log in to access your financial dashboard and start tracking expenses.
+            </p>
+
+            <a href="/login" class="btn-proceed-login">
+                <span>Proceed to Log In</span>
+                <i class="fas fa-arrow-right"></i>
+            </a>
+
+            <p class="redirect-note">
+                Auto-redirecting to login in <span id="countdown" style="font-weight: 600; color: var(--text-primary);">5</span>s...
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let seconds = 5;
+        const countdownEl = document.getElementById('countdown');
+        const timer = setInterval(() => {
+            seconds--;
+            if (countdownEl) countdownEl.textContent = seconds;
+            if (seconds <= 0) {
+                clearInterval(timer);
+                window.location.href = '/login';
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

@@ -4,160 +4,81 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login — ExpenseFlow</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/static/img/favicon.png">
+    <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        .auth-container {
-            width: 100%;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            position: relative;
-            z-index: 1;
-        }
-        .auth-card {
-            background: var(--bg-card);
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 40px;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-        }
-        .auth-header {
-            text-align: center;
-            margin-bottom: 28px;
-        }
-        .auth-header .logo-icon {
-            width: 48px;
-            height: 48px;
-            background: var(--gradient);
-            border-radius: 12px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.4rem;
-            color: #fff;
-            margin-bottom: 12px;
-        }
-        .auth-header h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-        .auth-header p {
-            color: var(--text-secondary);
-            font-size: 0.9rem;
-            margin-top: 4px;
-        }
-        .auth-form .form-group {
-            margin-bottom: 18px;
-        }
-        .auth-form label {
-            display: block;
-            font-size: 0.85rem;
-            font-weight: 500;
-            margin-bottom: 6px;
-            color: var(--text-secondary);
-        }
-        .auth-form input {
-            width: 100%;
-            padding: 12px 14px;
-            background: rgba(255,255,255,0.04);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            color: var(--text-primary);
-            outline: none;
-            transition: border-color .2s;
-        }
-        .auth-form input:focus {
-            border-color: var(--accent);
-        }
-        .auth-btn {
-            width: 100%;
-            padding: 12px;
-            background: var(--gradient);
-            color: #fff;
-            font-weight: 600;
-            border-radius: var(--radius-sm);
-            margin-top: 10px;
-            transition: opacity .2s;
-        }
-        .auth-btn:hover {
-            opacity: 0.9;
-        }
-        .auth-footer {
-            margin-top: 24px;
-            text-align: center;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .auth-footer a {
-            color: var(--accent-hover);
-            transition: color .2s;
-        }
-        .auth-footer a:hover {
-            text-decoration: underline;
-        }
-        .auth-alert {
-            padding: 10px 14px;
-            border-radius: var(--radius-sm);
-            font-size: 0.85rem;
-            margin-bottom: 16px;
-            display: none;
-        }
-        .auth-alert.error {
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #fca5a5;
-            display: block;
-        }
-        .auth-alert.success {
-            background: rgba(34, 197, 94, 0.15);
-            border: 1px solid rgba(34, 197, 94, 0.3);
-            color: #86efac;
-            display: block;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <!-- Early Theme Initialization to match user preference -->
+    <script>
+        (function() {
+            try {
+                const savedTheme = localStorage.getItem('expenseflow_theme') || 'dark';
+                document.documentElement.setAttribute('data-theme', savedTheme);
+            } catch (e) {}
+        })();
+    </script>
 </head>
 <body>
     <div class="auth-container">
         <div class="auth-card">
             <div class="auth-header">
-                <div class="logo-icon"><i class="fas fa-wallet"></i></div>
+                <a href="/" title="Back to ExpenseFlow Home" style="text-decoration: none; display: inline-block;">
+                    <div class="logo-icon"><img src="/static/img/logo.png" alt="ExpenseFlow Logo" class="app-logo-img"></div>
+                </a>
                 <h1>Welcome Back</h1>
-                <p>Log in to your ExpenseFlow account</p>
+                <p>Log in to access your expenses and insights</p>
             </div>
 
-            <div id="auth-alert" class="auth-alert"></div>
+            <div id="auth-alert" class="auth-alert"{% if verified or error %} style="display: block;" class="auth-alert {% if verified %}success{% else %}error{% endif %}"{% endif %}>
+                {% if verified %}
+                <div><i class="fas fa-check-circle"></i> Email verified successfully! Please log in to access your dashboard.</div>
+                {% elif error %}
+                <div><i class="fas fa-exclamation-circle"></i> {{ error }}</div>
+                {% endif %}
+            </div>
 
             <form id="login-form" class="auth-form">
                 <div class="form-group">
                     <label for="email">Email Address</label>
-                    <input type="email" id="email" name="email" placeholder="name@example.com" required>
+                    <input type="email" id="email" name="email" placeholder="name@example.com" required autofocus>
                 </div>
                 <div class="form-group">
                     <label for="password">Password</label>
-                    <input type="password" id="password" name="password" placeholder="••••••••" required>
+                    <div class="password-input-group">
+                        <input type="password" id="password" name="password" placeholder="••••••••" required>
+                        <button type="button" class="password-toggle-btn" id="btn-toggle-password" title="Show or hide password">
+                            <i class="fas fa-eye" id="password-eye-icon"></i>
+                        </button>
+                    </div>
                 </div>
-                <button type="submit" class="auth-btn">Log In</button>
+                <button type="submit" class="auth-btn">
+                    <i class="fas fa-sign-in-alt"></i> Log In
+                </button>
             </form>
 
             <div class="auth-footer">
-                <div>Don't have an account? <a href="/register">Sign up</a></div>
-                <div><a href="#" id="forgot-link">Forgot password?</a></div>
+                <div>Don't have an account? <a href="/register">Create an account</a></div>
+                <div><a href="#" id="forgot-link">Forgot your password?</a></div>
             </div>
         </div>
     </div>
 
     <script>
         const alertBox = document.getElementById('auth-alert');
+        const passwordInput = document.getElementById('password');
+        const togglePasswordBtn = document.getElementById('btn-toggle-password');
+        const eyeIcon = document.getElementById('password-eye-icon');
+
+        if (togglePasswordBtn && passwordInput) {
+            togglePasswordBtn.addEventListener('click', () => {
+                const isPassword = passwordInput.type === 'password';
+                passwordInput.type = isPassword ? 'text' : 'password';
+                eyeIcon.className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
+            });
+        }
 
         function showAlert(msg, type, showSignupBtn = false) {
             alertBox.className = `auth-alert ${type}`;
@@ -180,17 +101,12 @@
             alertBox.style.display = 'block';
         }
 
-        // Check for any notification passed from registration or other pages
+        // Check for verification redirect
         document.addEventListener('DOMContentLoaded', () => {
-            const notice = sessionStorage.getItem('loginNotice');
-            if (notice) {
-                sessionStorage.removeItem('loginNotice');
-                try {
-                    const parsed = JSON.parse(notice);
-                    showAlert(parsed.message, parsed.type || 'success');
-                } catch (e) {
-                    showAlert(notice, 'success');
-                }
+            try { sessionStorage.removeItem('loginNotice'); } catch (e) {}
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('verified') === 'true') {
+                showAlert('Email verified successfully! Please log in to access your dashboard.', 'success');
             }
         });
 
@@ -215,7 +131,7 @@
                         type: 'success'
                     }));
                     showAlert(successMsg, 'success');
-                    setTimeout(() => window.location.href = '/', 400);
+                    setTimeout(() => window.location.href = '/dashboard', 400);
                 } else {
                     if (result.code === 'USER_NOT_FOUND' || (result.error && result.error.includes('Account not found'))) {
                         showAlert('Account not found. Please sign up to continue.', 'error', true);

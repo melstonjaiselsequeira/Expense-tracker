@@ -24,6 +24,7 @@ class User(db.Model):
     is_verified = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+    monthly_budget = db.Column(db.Float, default=1000.0, nullable=True)
 
     # Relationship to expenses
     expenses = db.relationship("Expense", backref="user", lazy=True)
@@ -61,6 +62,7 @@ class Expense(db.Model):
     category = db.Column(db.String(50), nullable=False)
     description = db.Column(db.String(255), nullable=False)
     date = db.Column(db.Date, nullable=False, default=datetime.utcnow().date)
+    status = db.Column(db.String(20), default='paid', nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -73,11 +75,12 @@ class Expense(db.Model):
             'category': self.category,
             'description': self.description,
             'date': self.date.isoformat(),
+            'status': self.status or 'paid',
             'created_at': self.created_at.isoformat()
         }
 
     def __repr__(self):
-        return f'<Expense {self.id}: {self.description} - ${self.amount}>'
+        return f'<Expense {self.id}: {self.description} - ${self.amount} ({self.status})>'
 
 
 

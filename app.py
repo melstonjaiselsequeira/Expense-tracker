@@ -2,7 +2,7 @@ import os
 import csv
 import io
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, jsonify, Response, redirect, url_for, flash
+from flask import Flask, render_template, request, jsonify, Response, redirect, url_for, flash, session
 from flask_cors import CORS
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
 from flask_wtf import CSRFProtect
@@ -11,6 +11,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from itsdangerous import URLSafeTimedSerializer
 from dotenv import load_dotenv
+from email.utils import formataddr
 
 load_dotenv()
 
@@ -55,7 +56,7 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key')
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1')
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+app.config['SESSION_PERMANENT'] = False
 
 # Initialise extensions
 storage_uri = os.getenv('RATELIMIT_STORAGE_URI') or os.getenv('REDIS_URL') or 'memory://'
@@ -76,7 +77,10 @@ login_manager.login_view = 'login'
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    user = db.session.get(User, int(user_id))
+    if user and not user.is_verified:
+        return None
+    return user
 
 # Security Headers
 @app.after_request
@@ -112,8 +116,6 @@ def server_error_handler(e):
 
 
 
-
-
 init_db(app)
 
 # ── Seed sample data (disabled during migrations) ───
@@ -124,7 +126,18 @@ init_db(app)
 # Authentication routes
 @app.route('/register', methods=['GET', 'POST'])
 def register():
+    if request.method == 'GET':
+        if current_user.is_authenticated and current_user.is_verified:
+            return redirect(url_for('dashboard'))
+        if current_user.is_authenticated and not current_user.is_verified:
+            logout_user()
+            session.clear()
+        return render_template('register.html')
     if request.method == 'POST':
+        # Clear any existing session so new registration starts completely fresh
+        logout_user()
+        session.clear()
+
         data = request.get_json()
         full_name = data.get('full_name')
         email = data.get('email')
@@ -139,8 +152,20 @@ def register():
         db.session.commit()
         token = generate_confirmation_token(user.email)
         confirm_url = url_for('confirm_email', token=token, _external=True)
-        send_email(user.email, 'Confirm your account', f'Please click to confirm: {confirm_url}')
-        return jsonify({'message': 'Registration successful! Please log in to continue.'}), 201
+        html_content = build_email_html(
+            title="Confirm your email address<br>to start tracking with ExpenseFlow",
+            recipient_email=user.email,
+            description_text=f"You can start tracking with ExpenseFlow right away once you've confirmed that <a href=\"mailto:{user.email}\" style=\"color: #8b5cf6; text-decoration: underline;\">{user.email}</a> is your email. Click the button below to confirm.",
+            button_text="Confirm Email Address",
+            button_url=confirm_url
+        )
+        send_email(
+            user.email,
+            'Confirm your account — ExpenseFlow',
+            f'Please click to confirm: {confirm_url}',
+            html_body=html_content
+        )
+        return jsonify({'message': 'Registration successful! Please verify email & log in to continue.'}), 201
     else:
         return render_template('register.html')
 
@@ -148,18 +173,30 @@ def register():
 def confirm_email(token):
     email = confirm_token(token)
     if not email:
-        return jsonify({'error': 'Invalid or expired token'}), 400
+        if request.is_json or (request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html):
+            return jsonify({'error': 'Invalid or expired token'}), 400
+        return render_template('login.html', error='Invalid or expired confirmation link.'), 400
     user = User.query.filter_by(email=email).first_or_404()
-    if user.is_verified:
-        return jsonify({'message': 'Account already verified'}), 200
-    user.is_verified = True
-    db.session.commit()
-    return jsonify({'message': 'Email verified successfully'}), 200
-
+    if not user.is_verified:
+        user.is_verified = True
+        db.session.commit()
+    # Ensure any previous session is cleared so user logs in afresh after verification
+    logout_user()
+    session.clear()
+    if request.is_json or (request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html):
+        return jsonify({'message': 'Email verified successfully'}), 200
+    return render_template('verified.html', email=email), 200
 
 @app.route('/login', methods=['GET', 'POST'])
 @csrf.exempt
 def login():
+    if request.method == 'GET':
+        if current_user.is_authenticated and current_user.is_verified:
+            return redirect(url_for('dashboard'))
+        if current_user.is_authenticated and not current_user.is_verified:
+            logout_user()
+            session.clear()
+        return render_template('login.html')
     if request.method == 'POST':
         data = request.get_json()
         if not data:
@@ -183,10 +220,12 @@ def login():
 
         if not user.is_verified:
             return jsonify({
-                'error': 'Email not verified. Please verify your email before logging in.'
+                'error': 'Email not verified. Please verify your email before logging in.',
+                'code': 'EMAIL_NOT_VERIFIED'
             }), 403
 
-        login_user(user)
+        session.permanent = False
+        login_user(user, remember=False)
         return jsonify({
             'message': 'Login successful! Welcome back.'
         }), 200
@@ -197,6 +236,7 @@ def login():
 @login_required
 def logout():
     logout_user()
+    session.clear()
     if request.is_json or (request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html):
         return jsonify({'message': 'Logged out'}), 200
     return redirect(url_for('login'))
@@ -204,10 +244,24 @@ def logout():
 # Home page route
 @app.route('/')
 def index():
-    """Serve the main single-page application."""
-    if not current_user.is_authenticated:
-        return redirect(url_for('login'))
+    """Serve the application: landing page for visitors, dashboard for logged-in users."""
+    if current_user.is_authenticated and current_user.is_verified:
+        return render_template('dashboard.html')
+    if current_user.is_authenticated and not current_user.is_verified:
+        logout_user()
+        session.clear()
     return render_template('index.html')
+
+# Authenticated Dashboard route
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    """Serve the main authenticated expense dashboard."""
+    if not current_user.is_verified:
+        logout_user()
+        session.clear()
+        return redirect(url_for('login'))
+    return render_template('dashboard.html')
 
 # Password reset
 @app.route('/reset-password-request', methods=['POST'])
@@ -221,7 +275,19 @@ def reset_password_request():
     if user:
         token = generate_confirmation_token(user.email)
         reset_url = url_for('reset_password', token=token, _external=True)
-        send_email(user.email, 'Password Reset', f'Click to reset password: {reset_url}')
+        html_content = build_email_html(
+            title="Reset your password<br>for ExpenseFlow",
+            recipient_email=user.email,
+            description_text=f"We received a request to reset the password for <a href=\"mailto:{user.email}\" style=\"color: #8b5cf6; text-decoration: underline;\">{user.email}</a>. Click the button below to choose a new password.",
+            button_text="Reset Password",
+            button_url=reset_url
+        )
+        send_email(
+            user.email,
+            'Password Reset — ExpenseFlow',
+            f'Click to reset password: {reset_url}',
+            html_body=html_content
+        )
     return jsonify({'message': 'If the email exists, a reset link has been sent'}), 200
 
 
@@ -266,7 +332,118 @@ def confirm_token(token, expiration=3600):
         return None
     return email
 
-def send_email(to, subject, body):
+def build_email_html(title, recipient_email, description_text, button_text, button_url, note_text=None):
+    if not note_text:
+        note_text = "If you didn't request for this, you can safely ignore this email."
+
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title.replace('<br>', ' ')}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; margin: 0; padding: 40px 20px;">
+    <tr>
+      <td align="left" style="padding: 0;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px; margin: 0 auto; text-align: left;">
+          <!-- Rounded Logo Box -->
+          <tr>
+            <td style="padding-bottom: 24px;">
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" valign="middle" style="width: 44px; height: 44px; border: 1px solid #e5e7eb; border-radius: 10px; background-color: #ffffff; text-align: center; vertical-align: middle;">
+                    <img src="cid:logo_img" alt="ExpenseFlow Logo" width="30" height="30" style="display: block; width: 30px; height: 30px; margin: auto; border: 0;" />
+                  </td>
+                  <td style="padding-left: 12px; vertical-align: middle;">
+                    <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 800; color: #111827; letter-spacing: -0.4px;">Expense<span style="color: #8b5cf6;">Flow</span></span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Heading -->
+          <tr>
+            <td style="padding-bottom: 18px;">
+              <h1 style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 24px; font-weight: 700; line-height: 1.35; color: #111827; letter-spacing: -0.3px;">
+                {title}
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Description with Highlighted Email -->
+          <tr>
+            <td style="padding-bottom: 28px;">
+              <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 15px; line-height: 1.6; color: #374151;">
+                {description_text}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Primary CTA Button (ExpenseFlow Purple) -->
+          <tr>
+            <td style="padding-bottom: 28px;">
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="border-radius: 6px; background-color: #7c3aed; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);">
+                    <a href="{button_url}" target="_blank" style="display: inline-block; padding: 12px 24px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 6px; letter-spacing: -0.1px;">
+                      {button_text}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Security Note -->
+          <tr>
+            <td style="padding-bottom: 36px;">
+              <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 14px; line-height: 1.5; color: #6b7280;">
+                {note_text}
+              </p>
+            </td>
+          </tr>
+
+          <!-- Divider -->
+          <tr>
+            <td>
+              <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 0 0 24px 0;">
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td>
+              <table cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td valign="middle" style="padding-right: 8px;">
+                    <img src="cid:logo_img" alt="ExpenseFlow Logo" width="16" height="16" style="display: block; width: 16px; height: 16px; border: 0;" />
+                  </td>
+                  <td valign="middle" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #9ca3af; line-height: 1.4;">
+                    ExpenseFlow &bull; Smart Expense Tracking &amp; Budget Management
+                  </td>
+                </tr>
+              </table>
+              <p style="margin: 8px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #9ca3af; line-height: 1.4;">
+                This email was sent to <a href="mailto:{recipient_email}" style="color: #6b7280; text-decoration: underline;">{recipient_email}</a>.
+              </p>
+              <p style="margin: 12px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #9ca3af; line-height: 1.5; word-break: break-all;">
+                Button not working? Paste this link into your browser:<br>
+                <a href="{button_url}" style="color: #8b5cf6; text-decoration: underline;">{button_url}</a>
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
+
+def send_email(to, subject, body, html_body=None):
     # Simple SMTP email; configure via environment variables
     import smtplib, os
     from email.message import EmailMessage
@@ -281,9 +458,21 @@ def send_email(to, subject, body):
         return
     msg = EmailMessage()
     msg['Subject'] = subject
-    msg['From'] = smtp_user
+    msg['From'] = formataddr(("ExpenseFlow", smtp_user))
     msg['To'] = to
     msg.set_content(body)
+    if html_body:
+        msg.add_alternative(html_body, subtype='html')
+        logo_path = os.path.join(app.root_path, 'static', 'img', 'logo_email.png')
+        if not os.path.exists(logo_path):
+            logo_path = os.path.join(app.root_path, 'static', 'img', 'logo.png')
+        if os.path.exists(logo_path):
+            try:
+                with open(logo_path, 'rb') as img_f:
+                    logo_data = img_f.read()
+                msg.get_payload()[1].add_related(logo_data, maintype='image', subtype='png', cid='<logo_img>')
+            except Exception as e:
+                print(f'Warning: Could not attach inline logo to email: {e}')
     try:
         with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
             server.starttls()
@@ -292,7 +481,6 @@ def send_email(to, subject, body):
     except Exception as e:
         print(f'Failed to send email to {to}: {e}')
 
-# ── API List / Filter Expenses ────
 
 # ── API List / Filter Expenses ────
 @app.route('/api/expenses', methods=['GET'])
@@ -305,6 +493,11 @@ def get_expenses():
     category = request.args.get('category')
     if category and category != 'All':
         query = query.filter(Expense.category == category)
+
+    # Filter by status (all, paid, planned)
+    status_filter = request.args.get('status')
+    if status_filter and status_filter.lower() in ('paid', 'planned'):
+        query = query.filter(Expense.status == status_filter.lower())
 
     # Filter by date range
     start_date = request.args.get('start_date')
@@ -344,11 +537,21 @@ def create_expense():
     if not data or not data.get('amount') or not data.get('category') or not data.get('description'):
         return jsonify({'error': 'Missing required fields amount, category, description'}), 400
     try:
+        exp_date = datetime.strptime(data.get('date', datetime.now().strftime('%Y-%m-%d')), '%Y-%m-%d').date()
+        raw_status = data.get('status')
+        if raw_status and raw_status.lower() in ('paid', 'planned'):
+            exp_status = raw_status.lower()
+        elif exp_date > datetime.now().date():
+            exp_status = 'planned'
+        else:
+            exp_status = 'paid'
+
         expense = Expense(
             amount=float(data['amount']),
             category=data['category'],
             description=data['description'],
-            date=datetime.strptime(data.get('date', datetime.now().strftime('%Y-%m-%d')), '%Y-%m-%d').date(),
+            date=exp_date,
+            status=exp_status,
             user_id=current_user.id,
         )
         db.session.add(expense)
@@ -379,10 +582,27 @@ def update_expense(expense_id):
             expense.description = data['description']
         if 'date' in data:
             expense.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        if 'status' in data and data['status'].lower() in ('paid', 'planned'):
+            expense.status = data['status'].lower()
         db.session.commit()
         return jsonify(expense.to_dict())
     except (ValueError, TypeError) as e:
         return jsonify({'error': f'Invalid data {str(e)}'}), 400
+
+# ── API Mark Expense Paid ───────────────────────────────────────
+@app.route('/api/expenses/<int:expense_id>/mark-paid', methods=['POST', 'PUT'])
+@login_required
+def mark_expense_paid(expense_id):
+    """Mark a planned expense as paid in-place without duplication."""
+    expense = db.get_or_404(Expense, expense_id)
+    if expense.user_id != current_user.id:
+        return jsonify({'error': 'Forbidden'}), 403
+    expense.status = 'paid'
+    db.session.commit()
+    return jsonify({
+        'message': 'Expense marked as paid',
+        'expense': expense.to_dict()
+    })
 
 # ── API Delete Expense ──────────────────────────────────────────
 @app.route('/api/expenses/<int:expense_id>', methods=['DELETE'])
@@ -405,9 +625,9 @@ def export_csv():
     expenses = Expense.query.filter_by(user_id=current_user.id).order_by(Expense.date.desc()).all()
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['ID', 'Date', 'Category', 'Description', 'Amount'])
+    writer.writerow(['ID', 'Date', 'Category', 'Description', 'Amount', 'Status'])
     for e in expenses:
-        writer.writerow([e.id, e.date.isoformat(), e.category, e.description, f"{e.amount:.2f}"])
+        writer.writerow([e.id, e.date.isoformat(), e.category, e.description, e.amount, e.status or 'paid'])
     csv_content = output.getvalue()
     output.close()
     return Response(
@@ -420,53 +640,88 @@ def export_csv():
 @login_required
 def get_stats():
     """Get dashboard statistics for the logged‑in user."""
-    expenses = Expense.query.filter_by(user_id=current_user.id).all()
-    if not expenses:
-        return jsonify({
-            'total': 0,
-            'monthly': 0,
-            'daily_avg': 0,
-            'count': 0,
-            'category_breakdown': {},
-            'daily_trend': {},
-            'monthly_trend': {},
-            'top_category': 'N/A'
-        })
-    total = sum(e.amount for e in expenses)
+    user_budget = float(current_user.monthly_budget) if getattr(current_user, 'monthly_budget', None) is not None else 1000.0
+    all_expenses = Expense.query.filter_by(user_id=current_user.id).all()
+    
+    # Strictly separate paid expenses (actual spending) from planned expenses
+    paid_expenses = [e for e in all_expenses if (e.status or 'paid') == 'paid']
+    planned_expenses = [e for e in all_expenses if (e.status or 'paid') == 'planned']
+
     now = datetime.now()
-    monthly_expenses = [e for e in expenses if e.date.month == now.month and e.date.year == now.year]
-    monthly = sum(e.amount for e in monthly_expenses)
-    dates = [e.date for e in expenses]
-    date_range = (max(dates) - min(dates)).days + 1
-    daily_avg = total / max(date_range, 1)
-    # Category breakdown
+    monthly_paid = [e for e in paid_expenses if e.date.month == now.month and e.date.year == now.year]
+    monthly_planned = [e for e in planned_expenses if e.date.month == now.month and e.date.year == now.year]
+
+    total = sum(e.amount for e in paid_expenses)
+    monthly = sum(e.amount for e in monthly_paid)
+    planned_total = sum(e.amount for e in planned_expenses)
+    planned_monthly = sum(e.amount for e in monthly_planned)
+
+    if not paid_expenses:
+        daily_avg = 0
+    else:
+        dates = [e.date for e in paid_expenses]
+        date_range = (max(dates) - min(dates)).days + 1
+        daily_avg = total / max(date_range, 1)
+
+    # Category breakdown (only actual paid spending)
     category_breakdown = {}
-    for e in expenses:
+    for e in paid_expenses:
         category_breakdown[e.category] = category_breakdown.get(e.category, 0) + e.amount
     top_category = max(category_breakdown, key=category_breakdown.get) if category_breakdown else 'N/A'
-    # Daily trend (last 30 days)
+
+    # Daily trend (last 30 days of actual paid spending)
     daily_trend = {}
     for i in range(29, -1, -1):
         day = (now - timedelta(days=i)).date()
         day_str = day.isoformat()
-        daily_trend[day_str] = sum(e.amount for e in expenses if e.date == day)
-    # Monthly trend (last 6 months)
+        daily_trend[day_str] = sum(e.amount for e in paid_expenses if e.date == day)
+
+    # Monthly trend (last 6 months of actual paid spending)
     monthly_trend = {}
     for i in range(5, -1, -1):
         month_date = now - timedelta(days=i * 30)
         month_key = month_date.strftime('%Y-%m')
         month_label = month_date.strftime('%b %Y')
-        monthly_trend[month_label] = sum(e.amount for e in expenses if e.date.strftime('%Y-%m') == month_key)
+        monthly_trend[month_label] = sum(e.amount for e in paid_expenses if e.date.strftime('%Y-%m') == month_key)
+
     return jsonify({
         'total': round(total, 2),
         'monthly': round(monthly, 2),
         'daily_avg': round(daily_avg, 2),
-        'count': len(expenses),
+        'count': len(paid_expenses),
         'category_breakdown': category_breakdown,
         'daily_trend': daily_trend,
         'monthly_trend': monthly_trend,
         'top_category': top_category,
+        'monthly_budget': user_budget,
+        'planned_count': len(planned_expenses),
+        'planned_total': round(planned_total, 2),
+        'planned_monthly': round(planned_monthly, 2)
     })
+
+
+@app.route('/api/budget', methods=['GET', 'POST', 'PUT'])
+@login_required
+def budget():
+    """Get or update current user's monthly budget."""
+    if request.method == 'GET':
+        budget_val = float(current_user.monthly_budget) if getattr(current_user, 'monthly_budget', None) is not None else 1000.0
+        return jsonify({'monthly_budget': budget_val})
+
+    data = request.get_json(silent=True) or {}
+    val = data.get('monthly_budget') if 'monthly_budget' in data else data.get('amount')
+    try:
+        amount = float(val)
+        if amount <= 0:
+            return jsonify({'error': 'Budget must be greater than zero'}), 400
+        current_user.monthly_budget = round(amount, 2)
+        db.session.commit()
+        return jsonify({
+            'message': 'Budget updated successfully',
+            'monthly_budget': current_user.monthly_budget
+        })
+    except (TypeError, ValueError):
+        return jsonify({'error': 'Invalid budget amount'}), 400
 
 
 
@@ -511,19 +766,25 @@ def generate_pdf(user, year, month):
     elements.append(Paragraph(" ", styles['Normal']))
 
     # Table data
-    data = [['Date', 'Category', 'Description', 'Amount']]
-    total = 0.0
+    data = [['Date', 'Category', 'Description', 'Status', 'Amount']]
+    paid_total = 0.0
+    planned_total = 0.0
     for e in expenses:
+        st = (e.status or 'paid').capitalize()
         data.append([
             e.date.strftime('%Y-%m-%d'),
             e.category,
             e.description,
+            st,
             f"${e.amount:,.2f}"
         ])
-        total += e.amount
+        if (e.status or 'paid') == 'paid':
+            paid_total += e.amount
+        else:
+            planned_total += e.amount
     if not expenses:
-        data.append(['-', '-', 'No expenses for this month', '-'])
-    table = Table(data, colWidths=[1.5*inch, 1.5*inch, 2.5*inch, 1.0*inch])
+        data.append(['-', '-', 'No expenses for this month', '-', '-'])
+    table = Table(data, colWidths=[1.2*inch, 1.3*inch, 2.3*inch, 1.0*inch, 1.0*inch])
     table.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
         ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
@@ -531,7 +792,9 @@ def generate_pdf(user, year, month):
     ]))
     elements.append(table)
     elements.append(Paragraph(" ", styles['Normal']))
-    elements.append(Paragraph(f"Total expenses: ${total:,.2f}", styles['Heading2']))
+    elements.append(Paragraph(f"Total Paid Expenses: ${paid_total:,.2f}", styles['Heading2']))
+    if planned_total > 0:
+        elements.append(Paragraph(f"Planned Commitments (Pending Payment): ${planned_total:,.2f}", styles['Normal']))
 
     doc.build(elements)
     buffer.seek(0)
@@ -569,7 +832,7 @@ def send_email_with_attachment(to, subject, body, attachment_bytes, filename):
         return
     msg = EmailMessage()
     msg['Subject'] = subject
-    msg['From'] = smtp_user
+    msg['From'] = formataddr(("ExpenseFlow", smtp_user))
     msg['To'] = to
     msg.set_content(body)
     # attachment
