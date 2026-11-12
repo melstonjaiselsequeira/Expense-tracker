@@ -135,7 +135,13 @@
 
         document.getElementById('register-form').addEventListener('submit', async e => {
             e.preventDefault();
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            if (submitBtn && submitBtn.disabled) return;
             alertBox.style.display = 'none';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.6';
+            }
             const data = {
                 full_name: e.target.full_name.value.trim(),
                 email: e.target.email.value.trim(),
@@ -154,9 +160,17 @@
                     setTimeout(() => window.location.href = '/login', 2500);
                 } else {
                     showAlert(result.error || 'Registration failed', 'error');
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.style.opacity = '';
+                    }
                 }
             } catch (err) {
                 showAlert('Network error, please try again.', 'error');
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '';
+                }
             }
         });
     </script>
