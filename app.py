@@ -453,12 +453,13 @@ def send_email(to, subject, body, html_body=None):
     smtp_port = int(os.getenv('SMTP_PORT', '587'))
     smtp_user = os.getenv('SMTP_USER')
     smtp_password = os.getenv('SMTP_PASSWORD')
+    from_email = os.getenv('FROM_EMAIL') or smtp_user
     if not smtp_server or not smtp_user or not smtp_password or smtp_server == 'smtp.example.com':
         print(f"\n[DEV MODE - EMAIL NOT SENT TO SMTP]\nTo: {to}\nSubject: {subject}\n{body}\n")
         return
     msg = EmailMessage()
     msg['Subject'] = subject
-    msg['From'] = formataddr(("ExpenseFlow", smtp_user))
+    msg['From'] = formataddr(("ExpenseFlow", from_email))
     msg['To'] = to
     msg.set_content(body)
     if html_body:
@@ -478,8 +479,9 @@ def send_email(to, subject, body, html_body=None):
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.send_message(msg)
+            print(f'Successfully sent email to {to} from {from_email}', flush=True)
     except Exception as e:
-        print(f'Failed to send email to {to}: {e}')
+        print(f'Failed to send email to {to}: {e}', flush=True)
 
 
 # ── API List / Filter Expenses ────
@@ -827,12 +829,13 @@ def send_email_with_attachment(to, subject, body, attachment_bytes, filename):
     smtp_port = int(os.getenv('SMTP_PORT', '587'))
     smtp_user = os.getenv('SMTP_USER')
     smtp_password = os.getenv('SMTP_PASSWORD')
+    from_email = os.getenv('FROM_EMAIL') or smtp_user
     if not smtp_server or not smtp_user or not smtp_password or smtp_server == 'smtp.example.com':
         print(f"\n[DEV MODE - EMAIL NOT SENT TO SMTP]\nTo: {to}\nSubject: {subject}\n{body}\n")
         return
     msg = EmailMessage()
     msg['Subject'] = subject
-    msg['From'] = formataddr(("ExpenseFlow", smtp_user))
+    msg['From'] = formataddr(("ExpenseFlow", from_email))
     msg['To'] = to
     msg.set_content(body)
     # attachment
@@ -844,8 +847,9 @@ def send_email_with_attachment(to, subject, body, attachment_bytes, filename):
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.send_message(msg)
+            print(f'Successfully sent report email to {to} from {from_email}', flush=True)
     except Exception as e:
-        print(f'Failed to send report email to {to}: {e}')
+        print(f'Failed to send report email to {to}: {e}', flush=True)
 
 # ── Scheduler for Monthly Emails ───────────────────────────────────
 # Attempt to import APScheduler; if unavailable, fallback to no scheduler
