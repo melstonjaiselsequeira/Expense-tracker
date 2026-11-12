@@ -2,7 +2,7 @@ import os
 import csv
 import io
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, jsonify, Response, redirect, url_for, flash, session
+from flask import Flask, render_template, request, jsonify, Response, redirect, url_for, flash, session, has_request_context
 from flask_cors import CORS
 from flask_login import LoginManager, login_user, logout_user, current_user, login_required
 from flask_wtf import CSRFProtect
@@ -122,6 +122,17 @@ init_db(app)
 # Uncomment the following line to seed data in a development environment after migrations have been applied.
 # seed_data()
 
+# ── URL Detection Helper (Auto-detects live HTTPS domain or local host) ──
+def get_app_url():
+    """Detects the live application URL automatically (works in localhost and after deployment)."""
+    if os.getenv('APP_URL'):
+        return os.getenv('APP_URL').rstrip('/')
+    if has_request_context():
+        scheme = request.headers.get('X-Forwarded-Proto', request.scheme)
+        host = request.headers.get('X-Forwarded-Host', request.host)
+        return f"{scheme}://{host}"
+    return 'http://127.0.0.1:5000'
+
 # ── Page Routes ──
 # Authentication routes
 @app.route('/register', methods=['GET', 'POST'])
@@ -151,7 +162,7 @@ def register():
         db.session.add(user)
         db.session.commit()
         token = generate_confirmation_token(user.email)
-        confirm_url = url_for('confirm_email', token=token, _external=True)
+        confirm_url = f"{get_app_url()}/confirm/{token}"
         html_content = build_email_html(
             title="Confirm your email address<br>to start tracking with ExpenseFlow",
             recipient_email=user.email,
@@ -200,7 +211,7 @@ def resend_verification():
     # Always respond with success to prevent user enumeration
     if user and not user.is_verified:
         token = generate_confirmation_token(user.email)
-        confirm_url = url_for('confirm_email', token=token, _external=True)
+        confirm_url = f"{get_app_url()}/confirm/{token}"
         html_content = build_email_html(
             title="Confirm your email address<br>to start tracking with ExpenseFlow",
             recipient_email=user.email,
@@ -303,7 +314,7 @@ def reset_password_request():
     # Always respond with success to avoid enumeration
     if user:
         token = generate_confirmation_token(user.email)
-        reset_url = url_for('reset_password', token=token, _external=True)
+        reset_url = f"{get_app_url()}/reset-password/{token}"
         html_content = build_email_html(
             title="Reset your password<br>for ExpenseFlow",
             recipient_email=user.email,
