@@ -488,12 +488,56 @@ def build_email_html(title, recipient_email, description_text, button_text, butt
 </html>"""
 
 
+def send_via_brevo_api(to, subject, html_body, text_body, attachment_bytes=None, filename=None):
+    """Sends an email using Brevo's HTTPS REST API over port 443 (bypasses all cloud firewalls)."""
+    import urllib.request, json, os, base64
+    api_key = os.getenv('BREVO_API_KEY')
+    if not api_key:
+        return False
+    from_email = os.getenv('FROM_EMAIL') or 'nmj.kompany@gmail.com'
+    url = 'https://api.brevo.com/v3/smtp/email'
+    payload = {
+        'sender': {'name': 'ExpenseFlow', 'email': from_email},
+        'to': [{'email': to}],
+        'subject': subject,
+        'htmlContent': html_body or text_body,
+        'textContent': text_body
+    }
+    if attachment_bytes and filename:
+        payload['attachment'] = [{
+            'name': filename,
+            'content': base64.b64encode(attachment_bytes).decode('utf-8')
+        }]
+    headers = {
+        'api-key': api_key,
+        'Content-Type': 'application/json',
+        'accept': 'application/json'
+    }
+    try:
+        data = json.dumps(payload).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers=headers, method='POST')
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if resp.status in (200, 201):
+                print(f'Successfully sent email to {to} from {from_email} via Brevo HTTPS API', flush=True)
+                return True
+    except Exception as e:
+        print(f'Brevo HTTPS API error for {to}: {e}', flush=True)
+    return False
+
+
 def send_email(to, subject, body, html_body=None):
-    # Simple SMTP email; configure via environment variables
+    # Simple SMTP / HTTPS API email; configure via environment variables
     import smtplib, os
     from email.message import EmailMessage
     if app.config.get('TESTING'):
         return
+
+    # 1. Primary for Cloud / Render: Brevo REST API over HTTPS (Port 443)
+    if os.getenv('BREVO_API_KEY'):
+        if send_via_brevo_api(to, subject, html_body, body):
+            return
+
+    # 2. Fallback to standard SMTP (for localhost or direct SMTP)
     smtp_server = os.getenv('SMTP_SERVER')
     smtp_port = int(os.getenv('SMTP_PORT', '587'))
     smtp_user = os.getenv('SMTP_USER')
@@ -860,6 +904,13 @@ def send_email_with_attachment(to, subject, body, attachment_bytes, filename):
     from email.mime.application import MIMEApplication
     if app.config.get('TESTING'):
         return
+
+    # 1. Primary for Cloud / Render: Brevo REST API over HTTPS (Port 443)
+    if os.getenv('BREVO_API_KEY'):
+        if send_via_brevo_api(to, subject, None, body, attachment_bytes, filename):
+            return
+
+    # 2. Fallback to standard SMTP (for localhost or direct SMTP)
     smtp_server = os.getenv('SMTP_SERVER')
     smtp_port = int(os.getenv('SMTP_PORT', '587'))
     smtp_user = os.getenv('SMTP_USER')
