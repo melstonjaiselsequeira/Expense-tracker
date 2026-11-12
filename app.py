@@ -332,6 +332,11 @@ def confirm_token(token, expiration=3600):
         return None
     return email
 
+DEFAULT_LOGO_URL = os.getenv(
+    'LOGO_URL',
+    'https://cdn.jsdelivr.net/gh/melstonjaiselsequeira/Expense-tracker@main/static/img/logo_email.png'
+)
+
 def build_email_html(title, recipient_email, description_text, button_text, button_url, note_text=None):
     if not note_text:
         note_text = "If you didn't request for this, you can safely ignore this email."
@@ -354,7 +359,7 @@ def build_email_html(title, recipient_email, description_text, button_text, butt
               <table cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td align="center" valign="middle" style="width: 44px; height: 44px; border: 1px solid #e5e7eb; border-radius: 10px; background-color: #ffffff; text-align: center; vertical-align: middle;">
-                    <img src="cid:logo_img" alt="ExpenseFlow Logo" width="30" height="30" style="display: block; width: 30px; height: 30px; margin: auto; border: 0;" />
+                    <img src="{DEFAULT_LOGO_URL}" alt="ExpenseFlow Logo" width="30" height="30" style="display: block; width: 30px; height: 30px; margin: auto; border: 0;" />
                   </td>
                   <td style="padding-left: 12px; vertical-align: middle;">
                     <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 20px; font-weight: 800; color: #111827; letter-spacing: -0.4px;">Expense<span style="color: #8b5cf6;">Flow</span></span>
@@ -419,7 +424,7 @@ def build_email_html(title, recipient_email, description_text, button_text, butt
               <table cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td valign="middle" style="padding-right: 8px;">
-                    <img src="cid:logo_img" alt="ExpenseFlow Logo" width="16" height="16" style="display: block; width: 16px; height: 16px; border: 0;" />
+                    <img src="{DEFAULT_LOGO_URL}" alt="ExpenseFlow Logo" width="16" height="16" style="display: block; width: 16px; height: 16px; border: 0;" />
                   </td>
                   <td valign="middle" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 12px; color: #9ca3af; line-height: 1.4;">
                     ExpenseFlow &bull; Smart Expense Tracking &amp; Budget Management
@@ -464,16 +469,6 @@ def send_email(to, subject, body, html_body=None):
     msg.set_content(body)
     if html_body:
         msg.add_alternative(html_body, subtype='html')
-        logo_path = os.path.join(app.root_path, 'static', 'img', 'logo_email.png')
-        if not os.path.exists(logo_path):
-            logo_path = os.path.join(app.root_path, 'static', 'img', 'logo.png')
-        if os.path.exists(logo_path):
-            try:
-                with open(logo_path, 'rb') as img_f:
-                    logo_data = img_f.read()
-                msg.get_payload()[1].add_related(logo_data, maintype='image', subtype='png', cid='<logo_img>')
-            except Exception as e:
-                print(f'Warning: Could not attach inline logo to email: {e}')
     try:
         with smtplib.SMTP(smtp_server, smtp_port, timeout=10) as server:
             server.starttls()
