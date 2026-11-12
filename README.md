@@ -179,3 +179,8 @@ The test suite verifies:
 | `GET` | `/api/stats` | Aggregate metrics (totals, daily average, category breakdown, monthly trends) |
 | `GET` | `/api/export` | Export expenses in CSV format |
 | `GET` | `/api/report/<year>/<month>` | Generate and download monthly PDF report |
+
+### Automated MAil 
+1. Google App Password
+2. Brevo 
+
