@@ -25,13 +25,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=2.3">
 
     <!-- Early Theme Initialization to prevent flicker -->
     <script>
         (function() {
             try {
-                const savedTheme = localStorage.getItem('expenseflow_theme') || 'dark';
+                const savedTheme = localStorage.getItem('expenseflow_theme') || 'light';
                 document.documentElement.setAttribute('data-theme', savedTheme);
             } catch (e) {}
         })();
@@ -717,7 +717,7 @@
     <div class="toast-container" id="toast-container"></div>
 
     <!-- App Script -->
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/app.js?v=2.3"></script>
 </body>
 
 </html>

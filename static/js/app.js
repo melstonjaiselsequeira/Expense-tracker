@@ -61,7 +61,7 @@ let lastThemeToggle = 0;
 function getActiveTheme() {
   return document.documentElement.getAttribute('data-theme') ||
          localStorage.getItem('expenseflow_theme') ||
-         'dark';
+         'light';
 }
 
 function toggleTheme() {
@@ -110,7 +110,7 @@ function applyTheme(theme) {
 
 function initTheme() {
   const saved = localStorage.getItem('expenseflow_theme');
-  const theme = saved || 'dark';
+  const theme = saved || 'light';
   applyTheme(theme);
 }
 
