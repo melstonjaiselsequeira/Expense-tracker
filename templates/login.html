@@ -80,7 +80,7 @@
             });
         }
 
-        function showAlert(msg, type, showSignupBtn = false) {
+        function showAlert(msg, type, showSignupBtn = false, showResendBtn = false, userEmail = '') {
             alertBox.className = `auth-alert ${type}`;
             const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
             
@@ -95,6 +95,36 @@
                         </div>
                     </div>
                 `;
+            } else if (showResendBtn) {
+                alertBox.innerHTML = `
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        <div><i class="fas ${icon}"></i> ${msg}</div>
+                        <div>
+                            <button type="button" id="btn-resend-verification" style="display: inline-flex; align-items: center; gap: 6px; padding: 7px 15px; background: var(--gradient); color: #fff; font-size: 0.85rem; font-weight: 600; border: none; border-radius: var(--radius-sm); cursor: pointer; transition: opacity 0.2s;">
+                                <i class="fas fa-paper-plane"></i> Resend Verification Email
+                            </button>
+                        </div>
+                    </div>
+                `;
+                const resendBtn = document.getElementById('btn-resend-verification');
+                if (resendBtn) {
+                    resendBtn.addEventListener('click', async () => {
+                        resendBtn.disabled = true;
+                        resendBtn.style.opacity = '0.6';
+                        resendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+                        try {
+                            const res = await fetch('/resend-verification', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({email: userEmail})
+                            });
+                            const rdata = await res.json();
+                            showAlert(rdata.message || 'Verification email sent! Please check your inbox.', 'success');
+                        } catch (err) {
+                            showAlert('Could not resend email, please try again.', 'error');
+                        }
+                    });
+                }
             } else {
                 alertBox.innerHTML = `<div><i class="fas ${icon}"></i> ${msg}</div>`;
             }
@@ -147,6 +177,8 @@
                         showAlert('Account not found. Please sign up to continue.', 'error', true);
                     } else if (result.code === 'INVALID_PASSWORD' || (result.error && result.error.includes('Incorrect password'))) {
                         showAlert('Incorrect password. Please try again.', 'error', false);
+                    } else if (result.code === 'EMAIL_NOT_VERIFIED') {
+                        showAlert('Email not verified. Please verify your email before logging in.', 'error', false, true, data.email);
                     } else {
                         showAlert(result.error || 'Login failed', 'error', false);
                     }

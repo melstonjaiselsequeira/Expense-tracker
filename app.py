@@ -187,6 +187,35 @@ def confirm_email(token):
         return jsonify({'message': 'Email verified successfully'}), 200
     return render_template('verified.html', email=email), 200
 
+# ── Resend Verification Email ──────────────────────────────────────
+@app.route('/resend-verification', methods=['POST'])
+@csrf.exempt
+@limiter.limit("5 per minute")
+def resend_verification():
+    data = request.get_json() or {}
+    email = data.get('email', '').strip().lower()
+    if not email:
+        return jsonify({'error': 'Email is required'}), 400
+    user = User.query.filter_by(email=email).first()
+    # Always respond with success to prevent user enumeration
+    if user and not user.is_verified:
+        token = generate_confirmation_token(user.email)
+        confirm_url = url_for('confirm_email', token=token, _external=True)
+        html_content = build_email_html(
+            title="Confirm your email address<br>to start tracking with ExpenseFlow",
+            recipient_email=user.email,
+            description_text=f"You can start tracking with ExpenseFlow right away once you've confirmed that <a href=\"mailto:{user.email}\" style=\"color: #8b5cf6; text-decoration: underline;\">{user.email}</a> is your email. Click the button below to confirm.",
+            button_text="Confirm Email Address",
+            button_url=confirm_url
+        )
+        send_email(
+            user.email,
+            'Confirm your account — ExpenseFlow',
+            f'Please click to confirm: {confirm_url}',
+            html_body=html_content
+        )
+    return jsonify({'message': 'If an unverified account exists with that email, a fresh verification link has been sent!'}), 200
+
 @app.route('/login', methods=['GET', 'POST'])
 @csrf.exempt
 def login():

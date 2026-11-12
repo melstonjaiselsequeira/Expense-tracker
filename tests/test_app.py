@@ -268,3 +268,8 @@ def test_future_planned_expenses(client, verified_user):
     # Total expenses count in database is still exactly 2 (zero duplication)
     all_expenses = client.get('/api/expenses').get_json()
     assert len(all_expenses) == 2
+
+def test_resend_verification(client, unverified_user):
+    resp = client.post('/resend-verification', json={'email': unverified_user})
+    assert resp.status_code == 200
+    assert 'fresh verification link' in resp.get_json()['message'].lower()
