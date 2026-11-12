@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
@@ -91,7 +91,7 @@
                 <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
                 <span>Export PDF</span>
             </button>
-            <a href="/logout" class="btn-sidebar-action btn-logout" id="btn-logout" title="Log Out" style="text-decoration: none;">
+            <a href="/logout" class="btn-sidebar-action btn-logout" id="btn-logout" title="Log Out" style="text-decoration: none;" onclick="try{localStorage.removeItem('expenseflow_theme');}catch(e){}">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>Log Out</span>
             </a>

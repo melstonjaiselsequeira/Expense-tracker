@@ -84,7 +84,7 @@
                     <i class="fas fa-chart-pie"></i>
                     <span>Dashboard</span>
                 </a>
-                <a href="/logout" class="btn btn-ghost btn-sm" title="Log Out">
+                <a href="/logout" class="btn btn-ghost btn-sm" title="Log Out" onclick="try{localStorage.removeItem('expenseflow_theme');}catch(e){}">
                     <i class="fas fa-sign-out-alt"></i>
                     <span>Logout</span>
                 </a>
@@ -122,7 +122,7 @@
                     <a href="/dashboard" class="btn btn-primary btn-full">
                         <i class="fas fa-chart-pie"></i> Open Dashboard
                     </a>
-                    <a href="/logout" class="btn btn-secondary btn-full">
+                    <a href="/logout" class="btn btn-secondary btn-full" onclick="try{localStorage.removeItem('expenseflow_theme');}catch(e){}">
                         <i class="fas fa-sign-out-alt"></i> Log Out
                     </a>
                     {% else %}

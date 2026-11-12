@@ -273,13 +273,18 @@ def login():
         return render_template('login.html')
 
 @app.route('/logout')
-@login_required
 def logout():
     logout_user()
     session.clear()
     if request.is_json or (request.accept_mimetypes.accept_json and not request.accept_mimetypes.accept_html):
-        return jsonify({'message': 'Logged out'}), 200
-    return redirect(url_for('login'))
+        resp = jsonify({'message': 'Logged out'})
+        resp.delete_cookie('session')
+        resp.delete_cookie('remember_token')
+        return resp, 200
+    resp = redirect(url_for('index'))
+    resp.delete_cookie('session')
+    resp.delete_cookie('remember_token')
+    return resp
 
 # Home page route
 @app.route('/')
