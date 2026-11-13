@@ -167,7 +167,7 @@
                         type: 'success'
                     }));
                     showAlert(successMsg, 'success');
-                    setTimeout(() => window.location.href = '/dashboard', 400);
+                    setTimeout(() => window.location.href = result.redirect_url || '/dashboard', 400);
                 } else {
                     if (submitBtn) {
                         submitBtn.disabled = false;

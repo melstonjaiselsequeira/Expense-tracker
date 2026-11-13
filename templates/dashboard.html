@@ -25,7 +25,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="/static/css/style.css?v=2.3">
+    <link rel="stylesheet" href="/static/css/style.css?v=4.0">
 
     <!-- Early Theme Initialization to prevent flicker -->
     <script>
@@ -38,13 +38,13 @@
     </script>
 </head>
 
-<body>
+<body data-active-view="{{ active_view }}"{% if current_user.is_admin_user %} data-is-admin="true"{% endif %}>
 
     <!-- ═══ Mobile Sidebar Backdrop Overlay ═══ -->
     <div class="sidebar-overlay" id="sidebar-overlay"></div>
 
     <!-- ═══ Sidebar ═══ -->
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar{% if current_user.is_admin_user %} admin-sidebar{% endif %}" id="sidebar">
         <div class="sidebar-header">
             <div class="logo">
                 <div class="logo-icon">
@@ -70,27 +70,83 @@
         </div>
 
         <nav class="sidebar-nav">
-            <a href="/dashboard" class="nav-item active" data-view="dashboard" id="nav-dashboard">
+            {% if current_user.is_admin_user %}
+            <div class="sidebar-section-label">SUPPORT OPERATIONS</div>
+            <a href="#" class="nav-item {% if active_view == 'admin-dashboard' %}active{% endif %}" data-view="admin-dashboard" id="nav-admin-dashboard" title="Support Overview & Metrics">
+                <i class="fas fa-gauge-high"></i>
+                <span>Support Dashboard</span>
+            </a>
+            <a href="#" class="nav-item {% if active_view == 'admin-all-tickets' %}active{% endif %}" data-view="admin-all-tickets" id="nav-admin-all-tickets" title="All Submitted Tickets">
+                <i class="fas fa-inbox"></i>
+                <span>All Support Tickets</span>
+                <span class="nav-badge" id="sidebar-badge-all">0</span>
+            </a>
+            <a href="#" class="nav-item {% if active_view == 'admin-queries' %}active{% endif %}" data-view="admin-queries" id="nav-admin-queries" title="General Queries">
+                <i class="fas fa-circle-question"></i>
+                <span>General Queries</span>
+                <span class="nav-badge" id="sidebar-badge-queries">0</span>
+            </a>
+            <a href="#" class="nav-item {% if active_view == 'admin-problems' %}active{% endif %}" data-view="admin-problems" id="nav-admin-problems" title="Reported Problems & Bugs">
+                <i class="fas fa-triangle-exclamation"></i>
+                <span>Reported Problems</span>
+                <span class="nav-badge danger" id="sidebar-badge-problems">0</span>
+            </a>
+            <a href="#" class="nav-item {% if active_view == 'admin-features' %}active{% endif %}" data-view="admin-features" id="nav-admin-features" title="Feature Requests">
+                <i class="fas fa-lightbulb"></i>
+                <span>Feature Requests</span>
+                <span class="nav-badge" id="sidebar-badge-features">0</span>
+            </a>
+            <a href="#" class="nav-item {% if active_view == 'admin-conversations' %}active{% endif %}" data-view="admin-conversations" id="nav-admin-conversations" title="Ticket Conversations">
+                <i class="fas fa-comments"></i>
+                <span>Ticket Conversations</span>
+            </a>
+            <a href="#" class="nav-item {% if active_view == 'admin-faq' %}active{% endif %}" data-view="admin-faq" id="nav-admin-faq" title="FAQ Knowledge Base">
+                <i class="fas fa-book-open"></i>
+                <span>FAQ Management</span>
+            </a>
+            <a href="#" class="nav-item {% if active_view == 'admin-user-history' %}active{% endif %}" data-view="admin-user-history" id="nav-admin-user-history" title="User Support History">
+                <i class="fas fa-user-clock"></i>
+                <span>User Support History</span>
+            </a>
+
+            <div class="sidebar-section-label" style="margin-top: 1.15rem;">PERSONAL FINANCES</div>
+            <a href="/dashboard" class="nav-item {% if active_view == 'dashboard' %}active{% endif %}" data-view="dashboard" id="nav-dashboard">
                 <i class="fas fa-chart-pie"></i>
                 <span>Dashboard</span>
             </a>
-            <a href="#" class="nav-item" data-view="expenses" id="nav-expenses">
+            <a href="#" class="nav-item {% if active_view == 'expenses' %}active{% endif %}" data-view="expenses" id="nav-expenses">
                 <i class="fas fa-receipt"></i>
                 <span>Expenses</span>
             </a>
+            <a href="#" class="nav-item {% if active_view == 'reports' %}active{% endif %}" data-view="reports" id="nav-reports" title="Download Reports">
+                <i class="fas fa-file-export"></i>
+                <span>Download Reports</span>
+            </a>
+            <a href="#" class="nav-item {% if active_view == 'support' %}active{% endif %}" data-view="support" id="nav-support">
+                <i class="fas fa-headset"></i>
+                <span>Help & Support</span>
+            </a>
+            {% else %}
+            <a href="/dashboard" class="nav-item {% if active_view == 'dashboard' %}active{% endif %}" data-view="dashboard" id="nav-dashboard">
+                <i class="fas fa-chart-pie"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item {% if active_view == 'expenses' %}active{% endif %}" data-view="expenses" id="nav-expenses">
+                <i class="fas fa-receipt"></i>
+                <span>Expenses</span>
+            </a>
+            <a href="#" class="nav-item {% if active_view == 'reports' %}active{% endif %}" data-view="reports" id="nav-reports" title="Download Reports">
+                <i class="fas fa-file-export"></i>
+                <span>Download Reports</span>
+            </a>
+            <a href="#" class="nav-item {% if active_view == 'support' %}active{% endif %}" data-view="support" id="nav-support">
+                <i class="fas fa-headset"></i>
+                <span>Help & Support</span>
+            </a>
+            {% endif %}
         </nav>
 
         <div class="sidebar-footer">
-           
-            <!-- Export Buttons -->
-            <button class="btn-sidebar-action btn-export" id="btn-export" title="Export as CSV">
-                <i class="fas fa-file-csv" style="color: #10b981;"></i>
-                <span>Export CSV</span>
-            </button>
-            <button class="btn-sidebar-action btn-export" id="btn-export-pdf" title="Export Monthly PDF Report">
-                <i class="fas fa-file-pdf" style="color: #ef4444;"></i>
-                <span>Export PDF</span>
-            </button>
             <a href="/logout" class="btn-sidebar-action btn-logout" id="btn-logout" title="Log Out" style="text-decoration: none;" onclick="try{localStorage.removeItem('expenseflow_theme');}catch(e){}">
                 <i class="fas fa-sign-out-alt"></i>
                 <span>Log Out</span>
@@ -117,8 +173,8 @@
     <!-- ═══ Main Content ═══ -->
     <main class="main-content">
 
-        <!-- Top Greeting Bar -->
-        <div class="top-nav-bar">
+        <!-- Top Greeting Bar (Dashboard View Only) -->
+        <div class="top-nav-bar" id="global-top-header"{% if active_view != 'dashboard' %} style="display: none;"{% endif %}>
             <div class="top-greeting">
                 <h2 id="greeting-text">Welcome back, {{ current_user.full_name or 'there' }}! 👋</h2>
                 <p id="current-date-text">Loading today's date...</p>
@@ -146,7 +202,7 @@
         </div>
 
         <!-- ── Dashboard View ── -->
-        <section class="view active" id="view-dashboard">
+        <section class="view {% if active_view == 'dashboard' %}active{% endif %}" id="view-dashboard">
             <div class="view-header">
                 <div>
                     <h1>Dashboard</h1>
@@ -318,16 +374,12 @@
         </section>
 
         <!-- ── Expenses View ── -->
-        <section class="view" id="view-expenses">
+        <section class="view {% if active_view == 'expenses' %}active{% endif %}" id="view-expenses">
             <div class="view-header">
                 <div>
                     <h1>Expenses</h1>
                     <p class="subtitle">Search, filter, categorize, and manage all your expense records</p>
                 </div>
-                <!-- <button class="btn-primary" id="btn-add-expense-2">
-                    <i class="fas fa-plus"></i>
-                    <span>Add Expense</span>
-                </button> -->
             </div>
 
             <!-- Summary Strip -->
@@ -447,6 +499,11 @@
                         <i class="fas fa-rotate-left"></i>
                         <span>Reset</span>
                     </button>
+
+                    <button class="btn-primary" id="btn-add-expense-2" title="Add new expense (Shortcut: N)" style="padding: 0.65rem 1.15rem;">
+                        <i class="fas fa-plus"></i>
+                        <span>Add Expense</span>
+                    </button>
                 </div>
             </div>
 
@@ -475,6 +532,1204 @@
                 </div>
             </div>
         </section>
+
+        <!-- ── Download Reports View ── -->
+        <section class="view {% if active_view == 'reports' %}active{% endif %}" id="view-reports">
+            <div class="view-header">
+                <div>
+                    <h1>Download Reports</h1>
+                    <p class="subtitle">Generate custom financial reports and view your download history</p>
+                </div>
+            </div>
+
+            <!-- Report Generation Card -->
+            <div class="chart-card report-generate-card" style="margin-bottom: 2rem;">
+                <div class="chart-header">
+                    <h3><i class="fas fa-file-export" style="color: var(--accent); margin-right: 0.5rem;"></i> Generate a Report</h3>
+                </div>
+                <div class="report-generate-body" style="padding: 1.5rem 1.75rem 1.75rem;">
+                    <!-- Report Period Selection -->
+                    <div class="form-group" style="padding: 0; margin-bottom: 1.25rem;">
+                        <label style="margin-bottom: 0.65rem; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); display: block;">Report Period</label>
+                        <div class="report-period-pills" id="report-period-pills">
+                            <button type="button" class="period-pill active" data-period="monthly" id="pill-period-monthly">
+                                <i class="fas fa-calendar-alt"></i> Monthly Report
+                            </button>
+                            <button type="button" class="period-pill" data-period="yearly" id="pill-period-yearly">
+                                <i class="fas fa-calendar"></i> Yearly Report
+                            </button>
+                            <button type="button" class="period-pill" data-period="custom" id="pill-period-custom">
+                                <i class="fas fa-calendar-week"></i> Custom Date Range
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Monthly Controls -->
+                    <div class="report-period-controls" id="controls-monthly">
+                        <div class="form-row-2col" style="margin-bottom: 0;">
+                            <div class="form-group" style="padding: 0;">
+                                <label for="report-select-month" style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Month</label>
+                                <select id="report-select-month" class="filter-select" style="width: 100%;">
+                                    <option value="1">January</option>
+                                    <option value="2">February</option>
+                                    <option value="3">March</option>
+                                    <option value="4">April</option>
+                                    <option value="5">May</option>
+                                    <option value="6">June</option>
+                                    <option value="7">July</option>
+                                    <option value="8">August</option>
+                                    <option value="9">September</option>
+                                    <option value="10">October</option>
+                                    <option value="11">November</option>
+                                    <option value="12">December</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="padding: 0;">
+                                <label for="report-select-year-month" style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Year</label>
+                                <select id="report-select-year-month" class="filter-select" style="width: 100%;">
+                                    <!-- Populated dynamically by JS -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Yearly Controls -->
+                    <div class="report-period-controls" id="controls-yearly" style="display: none;">
+                        <div class="form-group" style="padding: 0;">
+                            <label for="report-select-year" style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Select Year</label>
+                            <select id="report-select-year" class="filter-select" style="width: 100%;">
+                                <!-- Populated dynamically by JS -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Custom Range Controls -->
+                    <div class="report-period-controls" id="controls-custom" style="display: none;">
+                        <div class="form-row-2col" style="margin-bottom: 0;">
+                            <div class="form-group" style="padding: 0;">
+                                <label for="report-start-date" style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Start Date</label>
+                                <input type="date" id="report-start-date" class="filter-date" style="width: 100%;">
+                            </div>
+                            <div class="form-group" style="padding: 0;">
+                                <label for="report-end-date" style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">End Date</label>
+                                <input type="date" id="report-end-date" class="filter-date" style="width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Export Format Selection -->
+                    <div class="form-group" style="padding: 0; margin-top: 1.25rem; margin-bottom: 1.5rem;">
+                        <label style="margin-bottom: 0.65rem; font-size: 0.78rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); display: block;">Export Format</label>
+                        <div class="report-format-grid" id="report-format-grid">
+                            <div class="format-card active" data-format="pdf" id="format-card-pdf">
+                                <div class="format-icon" style="color: #ef4444;"><i class="fas fa-file-pdf"></i></div>
+                                <span class="format-name">PDF</span>
+                                <span class="format-desc">Formatted Document</span>
+                            </div>
+                            <div class="format-card" data-format="csv" id="format-card-csv">
+                                <div class="format-icon" style="color: #10b981;"><i class="fas fa-file-csv"></i></div>
+                                <span class="format-name">CSV</span>
+                                <span class="format-desc">Spreadsheet Data</span>
+                            </div>
+                            <div class="format-card" data-format="xlsx" id="format-card-xlsx">
+                                <div class="format-icon" style="color: #06b6d4;"><i class="fas fa-file-excel"></i></div>
+                                <span class="format-name">Excel</span>
+                                <span class="format-desc">Styled Workbook</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Generate & Download Button -->
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button type="button" class="btn-primary" id="btn-confirm-download-report" style="padding: 0.75rem 1.75rem;">
+                            <i class="fas fa-download"></i> <span id="btn-download-report-text">Generate &amp; Download Report</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Report History Section -->
+            <div class="chart-card report-history-card">
+                <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3><i class="fas fa-history" style="color: var(--accent); margin-right: 0.5rem;"></i> Report History</h3>
+                    <button type="button" class="btn-secondary" id="btn-refresh-report-history" style="padding: 0.4rem 0.85rem; font-size: 0.82rem;">
+                        <i class="fas fa-arrows-rotate"></i> Refresh History
+                    </button>
+                </div>
+                <div class="table-responsive" style="padding: 0;">
+                    <table class="expenses-table" id="report-history-table">
+                        <thead>
+                            <tr>
+                                <th>Report Name</th>
+                                <th>Report Type</th>
+                                <th>Date Range</th>
+                                <th>Format</th>
+                                <th>Generated On</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="report-history-tbody">
+                            <!-- Populated dynamically by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Empty State -->
+                <div class="empty-state" id="reports-empty-state" style="display: none; padding: 3rem 1.5rem; text-align: center;">
+                    <div style="font-size: 2.75rem; color: var(--text-muted); margin-bottom: 0.85rem;"><i class="fas fa-file-invoice"></i></div>
+                    <h4 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.35rem; color: var(--text-primary);">No Generated Reports Yet</h4>
+                    <p style="font-size: 0.88rem; color: var(--text-secondary); max-width: 440px; margin: 0 auto;">Select your desired period and format above to generate and download your first report. Your history will be recorded right here.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Help & Support View ── -->
+        <section class="view {% if active_view == 'support' %}active{% endif %}" id="view-support">
+            <div class="view-header">
+                <div>
+                    <h1>Help & Support</h1>
+                    <p class="subtitle">Find answers, get instant help, submit requests, and track your tickets</p>
+                </div>
+            </div>
+
+            <!-- Welcome Header Card -->
+            <div class="support-welcome-card">
+                <div class="support-welcome-icon">
+                    <i class="fas fa-headset"></i>
+                </div>
+                <div class="support-welcome-content">
+                    <h2>How can we help you?</h2>
+                    <p>Browse our knowledge base FAQs, get instant solutions with Quick Help, submit support inquiries, or track your tickets.</p>
+                </div>
+            </div>
+
+            <!-- ── 4-Section Navigation Tabs Bar ── -->
+            <div class="support-tabs-bar" id="support-section-tabs">
+                <button type="button" class="support-tab-btn active" data-section="faqs" id="tab-btn-faqs">
+                    <i class="fas fa-circle-question"></i>
+                    <span>FAQs</span>
+                </button>
+                <button type="button" class="support-tab-btn" data-section="quick-help" id="tab-btn-quick-help">
+                    <i class="fas fa-bolt"></i>
+                    <span>Quick Help</span>
+                </button>
+                <button type="button" class="support-tab-btn" data-section="contact" id="tab-btn-contact">
+                    <i class="fas fa-paper-plane"></i>
+                    <span>Contact Support</span>
+                </button>
+                <button type="button" class="support-tab-btn" data-section="tickets" id="tab-btn-tickets">
+                    <i class="fas fa-ticket"></i>
+                    <span>My Support Tickets</span>
+                    <span class="support-tab-badge" id="user-tickets-badge">0</span>
+                </button>
+            </div>
+
+            <!-- ═════════════════════════════════════════════════════════
+                 SECTION A: FAQs
+                 ═════════════════════════════════════════════════════════ -->
+            <div class="support-section-pane active" id="pane-faqs">
+                <div class="support-section-header">
+                    <div class="support-section-header-title">
+                        <span class="support-badge"><i class="fas fa-circle-question"></i> Knowledge Base</span>
+                        <h3>Frequently Asked Questions</h3>
+                        <p class="subtitle">Browse answers to common questions about ExpenseFlow.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ Search & Category Filter Toolbar -->
+                <div class="faq-toolbar-card">
+                    <div class="faq-search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="faq-search-input" placeholder="Search questions or keywords (e.g. budget, export, password)..." class="faq-search-input" autocomplete="off">
+                        <button type="button" id="faq-search-clear" class="btn-clear-faq-search" style="display: none;" title="Clear search">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="faq-category-pills" id="faq-category-pills">
+                        <button type="button" class="faq-pill active" data-category="All">All Categories</button>
+                        <button type="button" class="faq-pill" data-category="Account Management">Account Management</button>
+                        <button type="button" class="faq-pill" data-category="Expense Management">Expense Management</button>
+                        <button type="button" class="faq-pill" data-category="Budget Management">Budget Management</button>
+                        <button type="button" class="faq-pill" data-category="Reports & Analytics">Reports & Analytics</button>
+                        <button type="button" class="faq-pill" data-category="Security & Privacy">Security & Privacy</button>
+                    </div>
+                </div>
+
+                <!-- FAQ Accordion Container -->
+                <div class="faq-accordion-container" id="faq-accordion-list">
+                    <!-- Populated dynamically by JS -->
+                </div>
+
+                <!-- FAQ Empty State -->
+                <div class="support-empty-state" id="faq-empty-state" style="display: none; margin-top: 1rem;">
+                    <div class="empty-icon">
+                        <i class="fas fa-search-minus"></i>
+                    </div>
+                    <h4>No FAQs Found</h4>
+                    <p>No questions matched your search or category filter. Try clearing your search or submit a support request below.</p>
+                </div>
+
+                <!-- Need more help CTA -->
+                <div class="support-footer-cta" style="margin-top: 2rem;">
+                    <div class="support-footer-cta-text">
+                        <h4>Didn't find what you need?</h4>
+                        <p>Our support team is available to assist you with any questions or technical issues.</p>
+                    </div>
+                    <button type="button" class="btn-primary btn-cta-contact" id="btn-faq-to-contact">
+                        <i class="fas fa-paper-plane"></i> Contact Support
+                    </button>
+                </div>
+            </div>
+
+            <!-- ═════════════════════════════════════════════════════════
+                 SECTION B: Quick Help
+                 ═════════════════════════════════════════════════════════ -->
+            <div class="support-section-pane" id="pane-quick-help" style="display: none;">
+                <div class="support-section-header">
+                    <div class="support-section-header-title">
+                        <span class="support-badge"><i class="fas fa-bolt"></i> Instant Solutions</span>
+                        <h3>Quick Help</h3>
+                        <p class="subtitle">Click any commonly asked question below for an immediate, step-by-step solution.</p>
+                    </div>
+                </div>
+
+                <div class="quick-questions-grid" id="quick-questions-grid">
+                    <!-- Populated dynamically by JS -->
+                </div>
+
+                <!-- Need more help CTA -->
+                <div class="support-footer-cta" style="margin-top: 2rem;">
+                    <div class="support-footer-cta-text">
+                        <h4>Need personalized assistance?</h4>
+                        <p>If the quick answers above didn't resolve your problem, submit a formal support request.</p>
+                    </div>
+                    <button type="button" class="btn-primary btn-cta-contact" id="btn-quick-to-contact">
+                        <i class="fas fa-paper-plane"></i> Contact Support
+                    </button>
+                </div>
+            </div>
+
+            <!-- ═════════════════════════════════════════════════════════
+                 SECTION C: Contact Support
+                 ═════════════════════════════════════════════════════════ -->
+            <div class="support-section-pane" id="pane-contact" style="display: none;">
+                <div class="support-section-header">
+                    <div class="support-section-header-title">
+                        <span class="support-badge"><i class="fas fa-paper-plane"></i> Get in Touch</span>
+                        <h3>Contact Support</h3>
+                        <p class="subtitle">Choose your request category and submit a ticket. We typically respond within 24 hours.</p>
+                    </div>
+                </div>
+
+                <!-- Submit Ticket Form Card -->
+                <div class="support-form-card" id="support-form-container">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-paper-plane" style="color: var(--accent); margin-right: 0.5rem;"></i> Submit a Support Request</h3>
+                    </div>
+                    <form id="support-ticket-form" class="support-form">
+                        <div class="form-row-2col">
+                            <div class="form-group">
+                                <label>Your Name</label>
+                                <input type="text" value="{{ current_user.full_name }}" readonly class="input-readonly" title="Your authenticated name">
+                            </div>
+                            <div class="form-group">
+                                <label>Your Email Address</label>
+                                <input type="email" value="{{ current_user.email }}" readonly class="input-readonly" title="Your authenticated email">
+                            </div>
+                        </div>
+
+                        <div class="form-row-2col">
+                            <div class="form-group">
+                                <label for="support-category">Request Category *</label>
+                                <select id="support-category" class="filter-select" style="width: 100%;" required>
+                                    <option value="General Query">General Query</option>
+                                    <option value="Report a Problem">Report a Problem</option>
+                                    <option value="Feature Request">Feature Request</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="support-subject">Subject *</label>
+                                <input type="text" id="support-subject" placeholder="e.g., Question about recurring budget..." maxlength="200" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="support-description">Detailed Message *</label>
+                            <textarea id="support-description" rows="5" placeholder="Please describe your question or issue in detail..." minlength="10" maxlength="4000" required></textarea>
+                            <span class="char-count-text" id="support-char-count">0 / 4000 characters</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Optional Screenshot Attachment</label>
+                            <div class="attachment-upload-box" id="attachment-dropzone">
+                                <input type="file" id="support-attachment-input" accept=".png,.jpg,.jpeg,.webp,.gif" style="display: none;">
+                                <div class="upload-prompt" id="upload-prompt">
+                                    <i class="fas fa-cloud-arrow-up"></i>
+                                    <span><strong>Click or drag an image</strong> to attach a screenshot</span>
+                                    <span class="upload-hint">PNG, JPG, JPEG, WEBP or GIF (Max 5 MB)</span>
+                                </div>
+                                <div class="attachment-preview" id="attachment-preview" style="display: none;">
+                                    <div class="preview-thumbnail-wrap">
+                                        <img id="attachment-preview-img" src="" alt="Screenshot Preview">
+                                    </div>
+                                    <div class="preview-info">
+                                        <span class="preview-filename" id="preview-filename">image.png</span>
+                                        <span class="preview-filesize" id="preview-filesize">0 KB</span>
+                                    </div>
+                                    <button type="button" class="btn-remove-attachment" id="btn-remove-attachment" title="Remove Attachment">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-actions" style="margin-top: 1.5rem; justify-content: flex-end;">
+                            <button type="submit" class="btn-primary" id="btn-submit-support">
+                                <i class="fas fa-paper-plane"></i>
+                                <span id="btn-submit-support-text">Submit Request</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ═════════════════════════════════════════════════════════
+                 SECTION D: My Support Tickets
+                 ═════════════════════════════════════════════════════════ -->
+            <div class="support-section-pane" id="pane-tickets" style="display: none;">
+                <div class="support-section-header">
+                    <div class="support-section-header-title">
+                        <span class="support-badge"><i class="fas fa-ticket"></i> Ticket History</span>
+                        <h3>My Support Tickets</h3>
+                        <p class="subtitle">Track current status, submission details, and support team replies.</p>
+                    </div>
+                    <button class="btn-secondary" id="btn-refresh-support-tickets" title="Refresh Tickets">
+                        <i class="fas fa-arrows-rotate"></i>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+
+                <!-- My Support Requests Table Card -->
+                <div class="expenses-table-card">
+                    <div class="chart-header">
+                        <h3>Submitted Tickets (<span id="user-tickets-count">0</span>)</h3>
+                        <button type="button" class="btn-secondary btn-sm" id="btn-tickets-new-request" style="font-size: 0.82rem; padding: 0.4rem 0.85rem;">
+                            <i class="fas fa-plus"></i> New Request
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="expenses-table" id="support-tickets-table">
+                            <thead>
+                                <tr>
+                                    <th>Ticket ID</th>
+                                    <th>Subject</th>
+                                    <th>Category</th>
+                                    <th>Submitted</th>
+                                    <th>Last Updated</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="support-tickets-tbody">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="support-empty-state" id="support-empty-state" style="display: none;">
+                        <div class="empty-icon">
+                            <i class="fas fa-inbox"></i>
+                        </div>
+                        <h4>No Support Tickets Yet</h4>
+                        <p>Have a question, need assistance, or want to suggest a feature? Submit your first support request.</p>
+                        <button type="button" class="btn-primary btn-cta-contact" id="btn-empty-to-contact" style="margin-top: 1rem;">
+                            <i class="fas fa-paper-plane"></i> Submit a Request
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {% if current_user.is_admin_user %}
+        <!-- ══════════════════════════════════════════════════════════════════
+             ADMIN SUPPORT MANAGEMENT SUITE (8 INTEGRATED SECTIONS)
+        ══════════════════════════════════════════════════════════════════ -->
+
+        <!-- ── Section 1: Support Dashboard ── -->
+        <section class="view {% if active_view == 'admin-dashboard' %}active{% endif %}" id="view-admin-dashboard">
+            <div class="view-header">
+                <div>
+                    <h1><i class="fas fa-gauge-high" style="color: var(--accent); margin-right: 0.5rem;"></i> Support Operations Dashboard</h1>
+                    <p class="subtitle">Real-time overview of ticket volume, category distribution, and customer support performance</p>
+                </div>
+                <div style="display: flex; gap: 0.6rem; align-items: center;">
+                    <button class="btn-secondary" id="btn-admin-refresh-dashboard" title="Refresh Dashboard Data">
+                        <i class="fas fa-arrows-rotate"></i> Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin Top Navigation Tabs -->
+            <div class="admin-tabs-nav">
+                <button type="button" class="admin-tab-btn active" data-admin-view="admin-dashboard"><i class="fas fa-gauge-high"></i> Support Dashboard</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-all-tickets"><i class="fas fa-inbox"></i> All Tickets (<span class="admin-pill-all">0</span>)</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-queries"><i class="fas fa-circle-question"></i> General Queries (<span class="admin-pill-queries">0</span>)</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-problems"><i class="fas fa-triangle-exclamation"></i> Reported Problems (<span class="admin-pill-problems">0</span>)</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-features"><i class="fas fa-lightbulb"></i> Feature Requests (<span class="admin-pill-features">0</span>)</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management (<span class="admin-pill-faqs">0</span>)</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+            </div>
+
+            <!-- 4 Key Metrics Stat Cards -->
+            <div class="admin-stats-grid">
+                <div class="admin-stat-card">
+                    <div class="admin-stat-icon-wrap" style="background: rgba(139, 92, 246, 0.15); color: var(--accent);">
+                        <i class="fas fa-inbox"></i>
+                    </div>
+                    <div class="admin-stat-info">
+                        <span class="admin-stat-label">Total Tickets</span>
+                        <h2 class="admin-stat-value" id="dash-total-tickets">0</h2>
+                        <span class="admin-stat-subtext">All submitted customer inquiries</span>
+                    </div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="admin-stat-icon-wrap" style="background: rgba(245, 158, 11, 0.15); color: var(--warning);">
+                        <i class="fas fa-envelope-open-text"></i>
+                    </div>
+                    <div class="admin-stat-info">
+                        <span class="admin-stat-label">Open Tickets</span>
+                        <h2 class="admin-stat-value" id="dash-open-tickets" style="color: var(--warning);">0</h2>
+                        <span class="admin-stat-subtext">Awaiting administrative response</span>
+                    </div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="admin-stat-icon-wrap" style="background: rgba(6, 182, 212, 0.15); color: #06b6d4;">
+                        <i class="fas fa-clock-rotate-left"></i>
+                    </div>
+                    <div class="admin-stat-info">
+                        <span class="admin-stat-label">In Progress</span>
+                        <h2 class="admin-stat-value" id="dash-inprogress-tickets" style="color: #06b6d4;">0</h2>
+                        <span class="admin-stat-subtext">Currently being investigated</span>
+                    </div>
+                </div>
+                <div class="admin-stat-card">
+                    <div class="admin-stat-icon-wrap" style="background: rgba(16, 185, 129, 0.15); color: var(--success);">
+                        <i class="fas fa-circle-check"></i>
+                    </div>
+                    <div class="admin-stat-info">
+                        <span class="admin-stat-label">Resolved Tickets</span>
+                        <h2 class="admin-stat-value" id="dash-resolved-tickets" style="color: var(--success);">0</h2>
+                        <span class="admin-stat-subtext">Successfully addressed & closed</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insights & Shortcuts Row -->
+            <div class="admin-insights-grid">
+                <!-- Category Breakdown Card -->
+                <div class="chart-card admin-dashboard-card" id="admin-card-categories">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-chart-pie" style="color: var(--accent); margin-right: 0.4rem;"></i> Ticket Category Breakdown</h3>
+                    </div>
+                    <div class="admin-cat-breakdown">
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 0.45rem;">
+                                <span style="font-weight: 600;"><i class="fas fa-circle-question" style="color: #8b5cf6; margin-right: 6px;"></i> General Queries</span>
+                                <span id="dash-cat-query-count" style="font-weight: 700;">0 (0%)</span>
+                            </div>
+                            <div class="admin-progress-track">
+                                <div class="admin-progress-fill query-fill" id="dash-cat-query-bar" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 0.45rem;">
+                                <span style="font-weight: 600;"><i class="fas fa-triangle-exclamation" style="color: #ef4444; margin-right: 6px;"></i> Reported Problems</span>
+                                <span id="dash-cat-prob-count" style="font-weight: 700;">0 (0%)</span>
+                            </div>
+                            <div class="admin-progress-track">
+                                <div class="admin-progress-fill problem-fill" id="dash-cat-prob-bar" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.88rem; margin-bottom: 0.45rem;">
+                                <span style="font-weight: 600;"><i class="fas fa-lightbulb" style="color: #06b6d4; margin-right: 6px;"></i> Feature Requests</span>
+                                <span id="dash-cat-feat-count" style="font-weight: 700;">0 (0%)</span>
+                            </div>
+                            <div class="admin-progress-track">
+                                <div class="admin-progress-fill feature-fill" id="dash-cat-feat-bar" style="width: 0%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shortcuts Card -->
+                <div class="chart-card admin-dashboard-card" id="admin-card-shortcuts">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-bolt" style="color: var(--accent); margin-right: 0.4rem;"></i> Operational Shortcuts</h3>
+                    </div>
+                    <div class="admin-shortcuts-list">
+                        <button type="button" class="btn-secondary admin-shortcut-btn" onclick="switchView('admin-all-tickets')">
+                            <i class="fas fa-inbox" style="color: var(--accent);"></i>
+                            <div class="shortcut-info">
+                                <div class="shortcut-title">Browse All Support Tickets</div>
+                                <div class="shortcut-desc">Search, filter, and triage incoming requests</div>
+                            </div>
+                            <i class="fas fa-chevron-right chevron-icon"></i>
+                        </button>
+                        <button type="button" class="btn-secondary admin-shortcut-btn" onclick="switchView('admin-conversations')">
+                            <i class="fas fa-comments" style="color: #06b6d4;"></i>
+                            <div class="shortcut-info">
+                                <div class="shortcut-title">Open Ticket Conversations</div>
+                                <div class="shortcut-desc">Read threads and reply directly to customers</div>
+                            </div>
+                            <i class="fas fa-chevron-right chevron-icon"></i>
+                        </button>
+                        <button type="button" class="btn-secondary admin-shortcut-btn" onclick="switchView('admin-faq')">
+                            <i class="fas fa-book-open" style="color: #10b981;"></i>
+                            <div class="shortcut-info">
+                                <div class="shortcut-title">FAQ Knowledge Base Management</div>
+                                <div class="shortcut-desc">Add, edit, or toggle FAQs visible in user Quick Help</div>
+                            </div>
+                            <i class="fas fa-chevron-right chevron-icon"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recently Submitted Tickets Card -->
+            <div class="expenses-table-card admin-dashboard-card" id="admin-card-recent-tickets">
+                <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3><i class="fas fa-clock" style="color: var(--accent); margin-right: 0.4rem;"></i> Recently Submitted Tickets</h3>
+                    <button type="button" class="btn-ghost" onclick="switchView('admin-all-tickets')" style="font-size: 0.85rem; color: var(--accent); cursor: pointer; border: none; background: none; font-weight: 600;">
+                        View All Tickets <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="expenses-table" id="admin-recent-tickets-table">
+                        <thead>
+                            <tr>
+                                <th>Ticket ID</th>
+                                <th>User</th>
+                                <th>Category</th>
+                                <th>Subject</th>
+                                <th>Submitted</th>
+                                <th>Status</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-recent-tickets-tbody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Section 2: All Support Tickets ── -->
+        <section class="view {% if active_view == 'admin-all-tickets' %}active{% endif %}" id="view-admin-all-tickets">
+            <div class="view-header">
+                <div>
+                    <h1><i class="fas fa-inbox" style="color: var(--accent); margin-right: 0.5rem;"></i> All Support Tickets</h1>
+                    <p class="subtitle">Search, filter, and inspect all customer inquiries across all departments</p>
+                </div>
+            </div>
+
+            <!-- Admin Top Navigation Tabs -->
+            <div class="admin-tabs-nav">
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-dashboard"><i class="fas fa-gauge-high"></i> Support Dashboard</button>
+                <button type="button" class="admin-tab-btn active" data-admin-view="admin-all-tickets"><i class="fas fa-inbox"></i> All Tickets (<span class="admin-pill-all">0</span>)</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-queries"><i class="fas fa-circle-question"></i> General Queries (<span class="admin-pill-queries">0</span>)</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-problems"><i class="fas fa-triangle-exclamation"></i> Reported Problems (<span class="admin-pill-problems">0</span>)</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-features"><i class="fas fa-lightbulb"></i> Feature Requests (<span class="admin-pill-features">0</span>)</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+            </div>
+
+            <!-- Filter & Search Bar -->
+            <div class="admin-support-filter-card">
+                <div class="admin-search-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="admin-all-search" placeholder="Search by Ticket ID, user email, name, or subject..." class="admin-search-input">
+                </div>
+                <div class="admin-filters-wrap">
+                    <select id="admin-all-filter-status" class="filter-select">
+                        <option value="All">All Statuses</option>
+                        <option value="Open">Open</option>
+                        <option value="Pending">Pending</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                        <option value="Closed">Closed</option>
+                    </select>
+                    <select id="admin-all-filter-category" class="filter-select">
+                        <option value="All">All Categories</option>
+                        <option value="General Query">General Query</option>
+                        <option value="Report a Problem">Report a Problem</option>
+                        <option value="Feature Request">Feature Request</option>
+                    </select>
+                    <select id="admin-all-sort" class="filter-select">
+                        <option value="date_desc">Newest First</option>
+                        <option value="date_asc">Oldest First</option>
+                        <option value="status">By Status</option>
+                        <option value="ticket_id">By Ticket ID</option>
+                    </select>
+                    <button class="btn-secondary" id="btn-admin-all-refresh" title="Refresh Tickets">
+                        <i class="fas fa-arrows-rotate"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table Card -->
+            <div class="expenses-table-card" style="margin-top: 1.25rem;">
+                <div class="chart-header">
+                    <h3>All Submitted Tickets (<span id="admin-all-count">0</span>)</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="expenses-table" id="admin-all-table">
+                        <thead>
+                            <tr>
+                                <th>Ticket ID</th>
+                                <th>User</th>
+                                <th>Category</th>
+                                <th>Subject</th>
+                                <th>Submitted Date</th>
+                                <th>Status</th>
+                                <th style="text-align: right;">Manage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-all-tbody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="support-empty-state" id="admin-all-empty" style="display: none;">
+                    <div class="empty-icon"><i class="fas fa-folder-open"></i></div>
+                    <h4>No Tickets Found</h4>
+                    <p>No support tickets matched your current search or filter criteria.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Section 3: General Queries ── -->
+        <section class="view {% if active_view == 'admin-queries' %}active{% endif %}" id="view-admin-queries">
+            <div class="view-header">
+                <div>
+                    <h1><i class="fas fa-circle-question" style="color: var(--accent); margin-right: 0.5rem;"></i> General Queries</h1>
+                    <p class="subtitle">Platform inquiries regarding account setup, navigation, reports, or general assistance</p>
+                </div>
+            </div>
+
+            <!-- Admin Top Navigation Tabs -->
+            <div class="admin-tabs-nav">
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-dashboard"><i class="fas fa-gauge-high"></i> Support Dashboard</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-all-tickets"><i class="fas fa-inbox"></i> All Tickets</button>
+                <button type="button" class="admin-tab-btn active" data-admin-view="admin-queries"><i class="fas fa-circle-question"></i> General Queries (<span class="admin-pill-queries">0</span>)</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-problems"><i class="fas fa-triangle-exclamation"></i> Reported Problems</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-features"><i class="fas fa-lightbulb"></i> Feature Requests</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+            </div>
+
+            <div class="admin-support-filter-card">
+                <div class="admin-search-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="admin-queries-search" placeholder="Search general queries by keyword, user, or ID..." class="admin-search-input">
+                </div>
+                <div class="admin-filters-wrap">
+                    <select id="admin-queries-filter-status" class="filter-select">
+                        <option value="All">All Statuses</option>
+                        <option value="Open">Open</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                        <option value="Closed">Closed</option>
+                    </select>
+                    <button class="btn-secondary" id="btn-admin-queries-refresh" title="Refresh General Queries">
+                        <i class="fas fa-arrows-rotate"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="expenses-table-card" style="margin-top: 1.25rem;">
+                <div class="chart-header">
+                    <h3>General Queries (<span id="admin-queries-count">0</span>)</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="expenses-table" id="admin-queries-table">
+                        <thead>
+                            <tr>
+                                <th>Ticket ID</th>
+                                <th>User</th>
+                                <th>Subject</th>
+                                <th>Submitted Date</th>
+                                <th>Status</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-queries-tbody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="support-empty-state" id="admin-queries-empty" style="display: none;">
+                    <div class="empty-icon"><i class="fas fa-circle-question"></i></div>
+                    <h4>No General Queries Found</h4>
+                    <p>There are currently no general query tickets matching your filter criteria.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Section 4: Reported Problems ── -->
+        <section class="view {% if active_view == 'admin-problems' %}active{% endif %}" id="view-admin-problems">
+            <div class="view-header">
+                <div>
+                    <h1><i class="fas fa-triangle-exclamation" style="color: var(--danger); margin-right: 0.5rem;"></i> Reported Problems & Technical Issues</h1>
+                    <p class="subtitle">Investigate bug reports, unexpected errors, and troubleshooting tickets submitted with screenshot evidence</p>
+                </div>
+            </div>
+
+            <!-- Admin Top Navigation Tabs -->
+            <div class="admin-tabs-nav">
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-dashboard"><i class="fas fa-gauge-high"></i> Support Dashboard</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-all-tickets"><i class="fas fa-inbox"></i> All Tickets</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-queries"><i class="fas fa-circle-question"></i> General Queries</button>
+                <button type="button" class="admin-tab-btn active" data-admin-view="admin-problems"><i class="fas fa-triangle-exclamation"></i> Reported Problems (<span class="admin-pill-problems">0</span>)</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-features"><i class="fas fa-lightbulb"></i> Feature Requests</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+            </div>
+
+            <div class="admin-support-filter-card">
+                <div class="admin-search-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="admin-problems-search" placeholder="Search reported problems by error, user, or ID..." class="admin-search-input">
+                </div>
+                <div class="admin-filters-wrap">
+                    <select id="admin-problems-filter-status" class="filter-select">
+                        <option value="All">All Statuses</option>
+                        <option value="Open">Open</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                        <option value="Closed">Closed</option>
+                    </select>
+                    <select id="admin-problems-filter-attachment" class="filter-select">
+                        <option value="All">All Items</option>
+                        <option value="with_attachment">With Screenshot Attachment</option>
+                    </select>
+                    <button class="btn-secondary" id="btn-admin-problems-refresh" title="Refresh Reported Problems">
+                        <i class="fas fa-arrows-rotate"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="expenses-table-card" style="margin-top: 1.25rem;">
+                <div class="chart-header">
+                    <h3>Reported Problems (<span id="admin-problems-count">0</span>)</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="expenses-table" id="admin-problems-table">
+                        <thead>
+                            <tr>
+                                <th>Ticket ID</th>
+                                <th>User</th>
+                                <th>Subject</th>
+                                <th>Attachment</th>
+                                <th>Submitted Date</th>
+                                <th>Status</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-problems-tbody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="support-empty-state" id="admin-problems-empty" style="display: none;">
+                    <div class="empty-icon"><i class="fas fa-check-circle" style="color: var(--success);"></i></div>
+                    <h4>No Reported Problems Found</h4>
+                    <p>All technical problem tickets have been resolved or match none of your filters.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Section 5: Feature Requests ── -->
+        <section class="view {% if active_view == 'admin-features' %}active{% endif %}" id="view-admin-features">
+            <div class="view-header">
+                <div>
+                    <h1><i class="fas fa-lightbulb" style="color: #06b6d4; margin-right: 0.5rem;"></i> Feature Requests & Proposals</h1>
+                    <p class="subtitle">Review product feedback, capability enhancements, and workflow suggestions from active users</p>
+                </div>
+            </div>
+
+            <!-- Admin Top Navigation Tabs -->
+            <div class="admin-tabs-nav">
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-dashboard"><i class="fas fa-gauge-high"></i> Support Dashboard</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-all-tickets"><i class="fas fa-inbox"></i> All Tickets</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-queries"><i class="fas fa-circle-question"></i> General Queries</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-problems"><i class="fas fa-triangle-exclamation"></i> Reported Problems</button>
+                <button type="button" class="admin-tab-btn active" data-admin-view="admin-features"><i class="fas fa-lightbulb"></i> Feature Requests (<span class="admin-pill-features">0</span>)</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+            </div>
+
+            <div class="admin-support-filter-card">
+                <div class="admin-search-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="admin-features-search" placeholder="Search feature proposals by keyword, user, or ID..." class="admin-search-input">
+                </div>
+                <div class="admin-filters-wrap">
+                    <select id="admin-features-filter-status" class="filter-select">
+                        <option value="All">All Statuses</option>
+                        <option value="Open">Open</option>
+                        <option value="In Progress">In Progress</option>
+                        <option value="Resolved">Resolved</option>
+                        <option value="Closed">Closed</option>
+                    </select>
+                    <button class="btn-secondary" id="btn-admin-features-refresh" title="Refresh Feature Requests">
+                        <i class="fas fa-arrows-rotate"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="expenses-table-card" style="margin-top: 1.25rem;">
+                <div class="chart-header">
+                    <h3>Feature Requests (<span id="admin-features-count">0</span>)</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="expenses-table" id="admin-features-table">
+                        <thead>
+                            <tr>
+                                <th>Ticket ID</th>
+                                <th>User</th>
+                                <th>Subject</th>
+                                <th>Submitted Date</th>
+                                <th>Status</th>
+                                <th style="text-align: right;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-features-tbody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="support-empty-state" id="admin-features-empty" style="display: none;">
+                    <div class="empty-icon"><i class="fas fa-lightbulb"></i></div>
+                    <h4>No Feature Requests Found</h4>
+                    <p>No feature requests have been submitted or match your current filter criteria.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Section 6: Ticket Conversations ── -->
+        <section class="view {% if active_view == 'admin-conversations' %}active{% endif %}" id="view-admin-conversations">
+            <div class="view-header">
+                <div>
+                    <h1><i class="fas fa-comments" style="color: var(--accent); margin-right: 0.5rem;"></i> Ticket Conversations</h1>
+                    <p class="subtitle">Complete two-way conversation channel between administration and account owners</p>
+                </div>
+            </div>
+
+            <!-- Admin Top Navigation Tabs -->
+            <div class="admin-tabs-nav">
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-dashboard"><i class="fas fa-gauge-high"></i> Support Dashboard</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-all-tickets"><i class="fas fa-inbox"></i> All Tickets</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-queries"><i class="fas fa-circle-question"></i> General Queries</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-problems"><i class="fas fa-triangle-exclamation"></i> Reported Problems</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-features"><i class="fas fa-lightbulb"></i> Feature Requests</button>
+                <button type="button" class="admin-tab-btn active" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+            </div>
+
+            <!-- Conversation Split Layout -->
+            <div class="admin-convo-container">
+                <!-- Left Pane: Ticket Queue -->
+                <div class="admin-convo-queue-pane">
+                    <div class="admin-convo-queue-header">
+                        <div class="admin-search-wrap" style="width: 100%;">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="admin-convo-queue-search" placeholder="Filter tickets..." class="admin-search-input" style="padding-top: 0.5rem; padding-bottom: 0.5rem;">
+                        </div>
+                        <div class="admin-convo-pills">
+                            <button type="button" class="admin-queue-pill active" data-status="All">All</button>
+                            <button type="button" class="admin-queue-pill" data-status="Open">Open</button>
+                            <button type="button" class="admin-queue-pill" data-status="In Progress">In Progress</button>
+                            <button type="button" class="admin-queue-pill" data-status="Resolved">Resolved</button>
+                        </div>
+                    </div>
+                    <div class="admin-convo-queue-list" id="admin-convo-queue-list">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Right Pane: Active Conversation Thread & Reply Composer -->
+                <div class="admin-convo-thread-pane" id="admin-convo-thread-pane">
+                    <!-- Default Empty State -->
+                    <div class="admin-convo-placeholder" id="admin-convo-placeholder">
+                        <div class="empty-icon"><i class="fas fa-comments"></i></div>
+                        <h3>Select a Ticket Conversation</h3>
+                        <p>Choose any ticket from the left panel to review the full interaction thread, inspect attachments, and send an administrative reply.</p>
+                    </div>
+
+                    <!-- Active Conversation Box (hidden until selected) -->
+                    <div class="admin-convo-active-box" id="admin-convo-active-box" style="display: none;">
+                        <!-- Thread Header Bar -->
+                        <div class="admin-convo-header-bar">
+                            <div class="admin-convo-header-left">
+                                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                                    <span class="admin-ticket-id-tag" id="convo-ticket-id">TKT-XXXX</span>
+                                    <span id="convo-category-badge">Category</span>
+                                    <span id="convo-status-badge">Status</span>
+                                </div>
+                                <h2 id="convo-subject" style="font-size: 1.15rem; font-weight: 700; margin: 0.35rem 0 0.2rem 0; color: var(--text-primary);">-</h2>
+                                <div style="font-size: 0.82rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                                    <span><i class="fas fa-user" style="margin-right: 4px; color: var(--accent);"></i> <strong id="convo-user-name">-</strong> (<span id="convo-user-email">-</span>)</span>
+                                    <span><i class="fas fa-calendar" style="margin-right: 4px;"></i> Submitted: <span id="convo-created-date">-</span></span>
+                                </div>
+                            </div>
+                            <div class="admin-convo-header-right">
+                                <label for="convo-quick-status" style="font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 4px;">Update Status</label>
+                                <select id="convo-quick-status" class="filter-select" style="min-width: 130px;">
+                                    <option value="Open">Open</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Resolved">Resolved</option>
+                                    <option value="Closed">Closed</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Initial Ticket Description Box -->
+                        <div class="admin-convo-initial-box">
+                            <div style="font-size: 0.78rem; text-transform: uppercase; font-weight: 700; color: var(--accent); margin-bottom: 0.35rem; display: flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-circle-info"></i> Original Customer Request
+                            </div>
+                            <div id="convo-initial-description" style="font-size: 0.92rem; line-height: 1.6; color: var(--text-primary); white-space: pre-wrap;">-</div>
+                            <div id="convo-attachment-wrap" style="margin-top: 0.75rem; display: none;">
+                                <div style="font-size: 0.76rem; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;">ATTACHED SCREENSHOT:</div>
+                                <a id="convo-attachment-link" href="#" target="_blank" style="display: inline-block;">
+                                    <img id="convo-attachment-img" src="" alt="Screenshot Evidence" style="max-height: 120px; border-radius: 8px; border: 1px solid var(--border);">
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- Chat Messages Thread -->
+                        <div class="admin-convo-messages-scroll" id="admin-convo-messages-scroll">
+                            <!-- Bubbles populated by JS -->
+                        </div>
+
+                        <!-- Admin Reply Composer -->
+                        <div class="admin-convo-composer">
+                            <!-- Quick Templates Bar -->
+                            <div class="admin-reply-templates">
+                                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">TEMPLATES:</span>
+                                <button type="button" class="btn-template-pill" data-template="Thank you for reporting this issue. Our technical team is actively investigating this behavior and will follow up shortly.">Under Investigation</button>
+                                <button type="button" class="btn-template-pill" data-template="This issue has been addressed and resolved. Please refresh your browser to verify. Thank you for your patience!">Resolved / Fixed</button>
+                                <button type="button" class="btn-template-pill" data-template="Thank you for this valuable suggestion! Our product team has logged this request for an upcoming feature release.">Feature Logged</button>
+                                <button type="button" class="btn-template-pill" data-template="Could you provide additional details or screenshots of the exact page where this occurred? That will help us replicate and fix it.">Need Details</button>
+                            </div>
+
+                            <textarea id="admin-reply-textarea" rows="3" placeholder="Write a response to the customer..." class="admin-reply-input"></textarea>
+
+                            <div class="admin-composer-footer">
+                                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                                    <span style="font-size: 0.82rem; color: var(--text-secondary);">Set status on send:</span>
+                                    <select id="admin-reply-status-select" class="filter-select" style="padding: 0.35rem 0.65rem; font-size: 0.82rem;">
+                                        <option value="In Progress">In Progress</option>
+                                        <option value="Resolved">Resolved</option>
+                                        <option value="Closed">Closed</option>
+                                        <option value="Open">Keep Open</option>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn-primary" id="btn-admin-send-reply">
+                                    <i class="fas fa-paper-plane"></i> Send Reply
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Section 7: FAQ Management ── -->
+        <section class="view {% if active_view == 'admin-faq' %}active{% endif %}" id="view-admin-faq">
+            <div class="view-header">
+                <div>
+                    <h1><i class="fas fa-book-open" style="color: var(--accent); margin-right: 0.5rem;"></i> FAQ Knowledge Base Management</h1>
+                    <p class="subtitle">Add, edit, publish/deactivate, and manage help articles reflected in user Quick Help</p>
+                </div>
+                <div>
+                    <button type="button" class="btn-primary" id="btn-admin-add-faq">
+                        <i class="fas fa-plus"></i> Add New FAQ
+                    </button>
+                </div>
+            </div>
+
+            <!-- Admin Top Navigation Tabs -->
+            <div class="admin-tabs-nav">
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-dashboard"><i class="fas fa-gauge-high"></i> Support Dashboard</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-all-tickets"><i class="fas fa-inbox"></i> All Tickets</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-queries"><i class="fas fa-circle-question"></i> General Queries</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-problems"><i class="fas fa-triangle-exclamation"></i> Reported Problems</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-features"><i class="fas fa-lightbulb"></i> Feature Requests</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
+                <button type="button" class="admin-tab-btn active" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management (<span class="admin-pill-faqs">0</span>)</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+            </div>
+
+            <div class="admin-support-filter-card">
+                <div class="admin-search-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="admin-faq-search-input" placeholder="Search FAQs by question or answer..." class="admin-search-input">
+                </div>
+                <div class="admin-filters-wrap">
+                    <select id="admin-faq-filter-category" class="filter-select">
+                        <option value="All">All Categories</option>
+                        <option value="Account Management">Account Management</option>
+                        <option value="Expense Management">Expense Management</option>
+                        <option value="Budget Management">Budget Management</option>
+                        <option value="Reports & Analytics">Reports & Analytics</option>
+                        <option value="Security & Privacy">Security & Privacy</option>
+                    </select>
+                    <button class="btn-secondary" id="btn-admin-refresh-faq" title="Refresh FAQs">
+                        <i class="fas fa-arrows-rotate"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="expenses-table-card" style="margin-top: 1.25rem;">
+                <div class="chart-header">
+                    <h3>Frequently Asked Questions (<span id="admin-faqs-count">0</span>)</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="expenses-table" id="admin-faqs-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 38%;">Question</th>
+                                <th style="width: 20%;">Category</th>
+                                <th style="width: 14%;">Status</th>
+                                <th style="width: 16%;">Last Updated</th>
+                                <th style="text-align: right; width: 12%;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-faqs-tbody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="support-empty-state" id="admin-faq-empty-state" style="display: none;">
+                    <div class="empty-icon"><i class="fas fa-circle-question"></i></div>
+                    <h4>No FAQs Found</h4>
+                    <p>No FAQ entries exist or match your filter. Click "+ Add New FAQ" to create one.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── Section 8: User Support History ── -->
+        <section class="view {% if active_view == 'admin-user-history' %}active{% endif %}" id="view-admin-user-history">
+            <div class="view-header">
+                <div>
+                    <h1><i class="fas fa-user-clock" style="color: var(--accent); margin-right: 0.5rem;"></i> User Support History</h1>
+                    <p class="subtitle">Inspect a user's previous support tickets, status history, and past customer inquiries</p>
+                </div>
+            </div>
+
+            <!-- Admin Top Navigation Tabs -->
+            <div class="admin-tabs-nav">
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-dashboard"><i class="fas fa-gauge-high"></i> Support Dashboard</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-all-tickets"><i class="fas fa-inbox"></i> All Tickets</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-queries"><i class="fas fa-circle-question"></i> General Queries</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-problems"><i class="fas fa-triangle-exclamation"></i> Reported Problems</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-features"><i class="fas fa-lightbulb"></i> Feature Requests</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management</button>
+                <button type="button" class="admin-tab-btn active" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+            </div>
+
+            <!-- User Selector Bar -->
+            <div class="admin-support-filter-card" style="align-items: center;">
+                <div class="admin-search-wrap" style="flex: 2;">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="admin-user-search-input" placeholder="Search user by name or email..." class="admin-search-input">
+                </div>
+                <div class="admin-filters-wrap" style="flex: 2;">
+                    <select id="admin-user-select" class="filter-select" style="width: 100%;">
+                        <option value="">Select a User to Inspect Support History...</option>
+                    </select>
+                </div>
+                <button class="btn-secondary" id="btn-admin-refresh-users" title="Refresh Users List">
+                    <i class="fas fa-arrows-rotate"></i>
+                </button>
+            </div>
+
+            <!-- Selected User Summary & History -->
+            <div id="admin-user-history-container" style="margin-top: 1.25rem;">
+                <div class="support-empty-state" id="admin-user-history-empty">
+                    <div class="empty-icon"><i class="fas fa-users-gear"></i></div>
+                    <h4>Select a User to View History</h4>
+                    <p>Select a user from the dropdown or search above to view their complete support ticket history and previous interactions.</p>
+                </div>
+
+                <div id="admin-user-history-content" style="display: none;">
+                    <!-- User Profile Summary Card -->
+                    <div class="chart-card" style="padding: 1.5rem; margin-bottom: 1.25rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div class="admin-user-avatar" id="user-hist-avatar">U</div>
+                                <div>
+                                    <h2 id="user-hist-name" style="font-size: 1.25rem; font-weight: 700; margin: 0; color: var(--text-primary);">-</h2>
+                                    <div id="user-hist-email" style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 2px;">-</div>
+                                    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">
+                                        <span>Registered: <strong id="user-hist-joined">-</strong></span> •
+                                        <span>Verification: <span id="user-hist-verified" class="admin-badge badge-published">Verified</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 1rem;">
+                                <div class="user-hist-stat-pill">
+                                    <span class="label">Total Tickets</span>
+                                    <span class="value" id="user-hist-total">0</span>
+                                </div>
+                                <div class="user-hist-stat-pill">
+                                    <span class="label">Open</span>
+                                    <span class="value" id="user-hist-open" style="color: var(--warning);">0</span>
+                                </div>
+                                <div class="user-hist-stat-pill">
+                                    <span class="label">Resolved</span>
+                                    <span class="value" id="user-hist-resolved" style="color: var(--success);">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Ticket Table -->
+                    <div class="expenses-table-card">
+                        <div class="chart-header">
+                            <h3>Support Interaction Timeline (<span id="user-hist-tickets-count">0</span> tickets)</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="expenses-table" id="admin-user-tickets-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ticket ID</th>
+                                        <th>Category</th>
+                                        <th>Subject</th>
+                                        <th>Submitted Date</th>
+                                        <th>Messages</th>
+                                        <th>Status</th>
+                                        <th style="text-align: right;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-user-tickets-tbody">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        {% endif %}
 
     </main>
 
@@ -634,47 +1889,6 @@
         </div>
     </div>
 
-    <!-- ═══ PDF Export Month/Year Modal ═══ -->
-    <div class="modal-overlay" id="pdf-modal-overlay">
-        <div class="modal modal-small" id="pdf-modal">
-            <div class="modal-header">
-                <h2><i class="fas fa-file-pdf" style="color: #ef4444;"></i> Export PDF Report</h2>
-                <button class="modal-close" id="pdf-modal-close" title="Close">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="form-group" style="padding-top: 1.5rem;">
-                <label for="pdf-select-month">Select Month</label>
-                <select id="pdf-select-month" class="filter-select" style="width: 100%;">
-                    <option value="1">January</option>
-                    <option value="2">February</option>
-                    <option value="3">March</option>
-                    <option value="4">April</option>
-                    <option value="5">May</option>
-                    <option value="6">June</option>
-                    <option value="7">July</option>
-                    <option value="8">August</option>
-                    <option value="9">September</option>
-                    <option value="10">October</option>
-                    <option value="11">November</option>
-                    <option value="12">December</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="pdf-select-year">Select Year</label>
-                <select id="pdf-select-year" class="filter-select" style="width: 100%;">
-                    <!-- Populated dynamically by JS -->
-                </select>
-            </div>
-            <div class="form-actions">
-                <button type="button" class="btn-secondary" id="btn-cancel-pdf">Cancel</button>
-                <button type="button" class="btn-primary" id="btn-confirm-download-pdf">
-                    <i class="fas fa-download"></i> Download PDF
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- ═══ Keyboard Shortcuts Sheet Modal ═══ -->
     <div class="modal-overlay" id="shortcuts-modal-overlay">
         <div class="modal modal-small" id="shortcuts-modal">
@@ -713,11 +1927,227 @@
         </div>
     </div>
 
+    <!-- ═══ Ticket Details Modal ═══ -->
+    <div class="modal-overlay" id="ticket-modal-overlay">
+        <div class="modal modal-ticket-detail" id="ticket-modal" style="max-width: 640px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-ticket" style="color: var(--accent);"></i> <span id="modal-ticket-id">Ticket Details</span></h2>
+                <button class="modal-close" id="ticket-modal-close" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body-ticket" style="padding: 1.4rem 1.75rem; max-height: 75vh; overflow-y: auto;">
+                <div class="ticket-meta-grid">
+                    <div class="ticket-meta-item">
+                        <span class="meta-label">Submitted By</span>
+                        <div class="meta-value" id="ticket-detail-user">-</div>
+                    </div>
+                    <div class="ticket-meta-item">
+                        <span class="meta-label">Category</span>
+                        <div class="meta-value" id="ticket-detail-category">-</div>
+                    </div>
+                    <div class="ticket-meta-item">
+                        <span class="meta-label">Status</span>
+                        <div class="meta-value" id="ticket-detail-status">-</div>
+                    </div>
+                    <div class="ticket-meta-item">
+                        <span class="meta-label">Submitted On</span>
+                        <div class="meta-value" id="ticket-detail-date">-</div>
+                    </div>
+                </div>
+
+                <div class="ticket-field-block" style="margin-top: 1.25rem;">
+                    <span class="meta-label">Subject</span>
+                    <h4 class="ticket-detail-subject" id="ticket-detail-subject" style="margin-top: 4px; font-size: 1.05rem; font-weight: 700; color: var(--text-primary);">-</h4>
+                </div>
+
+                <div class="ticket-field-block" style="margin-top: 1rem;">
+                    <span class="meta-label">Message Details</span>
+                    <div class="ticket-detail-description" id="ticket-detail-description" style="margin-top: 6px; padding: 1rem; border-radius: var(--radius-sm); background: var(--bg-input); border: 1px solid var(--border); line-height: 1.6; white-space: pre-wrap; font-size: 0.92rem; color: var(--text-primary);">-</div>
+                </div>
+
+                <div class="ticket-field-block" id="ticket-attachment-section" style="margin-top: 1.25rem; display: none;">
+                    <span class="meta-label">Attached Screenshot</span>
+                    <div class="ticket-attachment-viewer" style="margin-top: 6px;">
+                        <a id="ticket-attachment-link" href="#" target="_blank" title="Click to open full-size image in new tab">
+                            <img id="ticket-attachment-img" src="" alt="Ticket Attachment" style="max-width: 100%; max-height: 260px; border-radius: var(--radius-sm); border: 1px solid var(--border); object-fit: contain; background: #000;">
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Admin Response / Notes View for Users -->
+                <div class="ticket-field-block" id="ticket-user-notes-section" style="margin-top: 1.25rem; display: none;">
+                    <span class="meta-label" style="color: #10b981;"><i class="fas fa-comment-dots"></i> Support Team Response</span>
+                    <div class="ticket-admin-notes-box" id="ticket-user-notes-text" style="margin-top: 6px; padding: 1rem; border-radius: var(--radius-sm); background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); color: var(--text-primary); line-height: 1.6; white-space: pre-wrap; font-size: 0.92rem;">-</div>
+                </div>
+                <div class="ticket-field-block" id="ticket-user-pending-section" style="margin-top: 1.25rem; display: none;">
+                    <div style="padding: 0.85rem 1rem; border-radius: var(--radius-sm); background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); font-size: 0.85rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.6rem;">
+                        <i class="fas fa-clock" style="color: #f59e0b;"></i>
+                        <span>Our support team is reviewing your ticket and will update status and reply here.</span>
+                    </div>
+                </div>
+
+                {% if current_user.is_admin_user %}
+                <!-- Admin Status Update & Notes Editor -->
+                <div class="admin-ticket-edit-card" id="admin-ticket-edit-box" style="margin-top: 1.5rem; padding: 1.2rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-card-hover);">
+                    <h4 style="font-size: 0.92rem; font-weight: 700; margin-bottom: 0.85rem; color: var(--text-primary);"><i class="fas fa-user-shield" style="color: var(--accent);"></i> Admin Controls</h4>
+                    <div class="form-group" style="margin-bottom: 0.85rem;">
+                        <label for="admin-update-status" style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Update Status</label>
+                        <select id="admin-update-status" class="filter-select" style="width: 100%;">
+                            <option value="Open">Open</option>
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                            <option value="Closed">Closed</option>
+                            <option value="Rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label for="admin-update-notes" style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase;">Internal Notes / Customer Response</label>
+                        <textarea id="admin-update-notes" rows="3" placeholder="Enter resolution details or notes..." style="width: 100%; padding: 0.65rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary);"></textarea>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button type="button" class="btn-primary" id="btn-admin-save-ticket">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer" style="padding: 1rem 1.75rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end;">
+                <button type="button" class="btn-secondary" id="btn-close-ticket-modal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Quick Question Instant Answer Modal ═══ -->
+    <div class="modal-overlay" id="quick-question-modal-overlay">
+        <div class="modal modal-small" id="quick-question-modal">
+            <div class="modal-header">
+                <h2><i class="fas fa-bolt" style="color: var(--accent);"></i> <span id="quick-question-modal-title">Quick Answer</span></h2>
+                <button class="modal-close" id="quick-question-modal-close" title="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body-text" style="padding: 1.5rem 1.75rem;">
+                <h3 id="quick-question-text" style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.85rem; color: var(--text-primary);">-</h3>
+                <div id="quick-question-answer" style="line-height: 1.7; color: var(--text-secondary); font-size: 0.95rem; background: var(--bg-input); padding: 1.1rem; border-radius: var(--radius-sm); border: 1px solid var(--border); white-space: pre-wrap;">-</div>
+            </div>
+            <div class="modal-footer" style="padding: 1rem 1.75rem; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                <button type="button" class="btn-ghost" id="btn-quick-ask-support" style="font-size: 0.85rem; cursor: pointer; color: var(--accent); background: none; border: none; font-weight: 600;">
+                    <i class="fas fa-paper-plane"></i> Still need help? Submit ticket
+                </button>
+                <button type="button" class="btn-secondary" id="btn-close-quick-question-modal">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    {% if current_user.is_admin_user %}
+    <!-- ═══ Admin Add/Edit FAQ Modal ═══ -->
+    <div class="modal-overlay" id="admin-faq-modal-overlay">
+        <div class="modal" id="admin-faq-modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-circle-question" style="color: var(--accent);"></i> <span id="admin-faq-modal-title">Add FAQ</span></h2>
+                <button class="modal-close" id="admin-faq-modal-close" title="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="admin-faq-form" style="padding: 1.5rem 1.75rem;">
+                <input type="hidden" id="admin-faq-id">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="admin-faq-category">Category *</label>
+                    <select id="admin-faq-category" class="filter-select" style="width: 100%;" required>
+                        <option value="Account Management">Account Management</option>
+                        <option value="Expense Management">Expense Management</option>
+                        <option value="Budget Management">Budget Management</option>
+                        <option value="Reports & Analytics">Reports & Analytics</option>
+                        <option value="Security & Privacy">Security & Privacy</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="admin-faq-question">Question *</label>
+                    <input type="text" id="admin-faq-question" placeholder="e.g., How do I export my data?" required maxlength="255">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="admin-faq-answer">Answer *</label>
+                    <textarea id="admin-faq-answer" rows="5" placeholder="Detailed answer..." required style="width: 100%; padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary); font-family: inherit; font-size: 0.92rem;"></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer;">
+                        <input type="checkbox" id="admin-faq-published" checked style="width: 18px; height: 18px; accent-color: var(--accent);">
+                        <span style="font-size: 0.9rem; color: var(--text-primary); text-transform: none; letter-spacing: normal;">Publish immediately (visible to all users)</span>
+                    </label>
+                </div>
+                <div class="form-actions" style="margin-top: 1rem;">
+                    <button type="button" class="btn-secondary" id="btn-cancel-admin-faq">Cancel</button>
+                    <button type="submit" class="btn-primary" id="btn-save-admin-faq">
+                        <i class="fas fa-save"></i> Save FAQ
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══ Admin Add/Edit Quick Question Modal ═══ -->
+    <div class="modal-overlay" id="admin-qq-modal-overlay">
+        <div class="modal" id="admin-qq-modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-bolt" style="color: var(--accent);"></i> <span id="admin-qq-modal-title">Add Quick Question</span></h2>
+                <button class="modal-close" id="admin-qq-modal-close" title="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="admin-qq-form" style="padding: 1.5rem 1.75rem;">
+                <input type="hidden" id="admin-qq-id">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="admin-qq-question">Question *</label>
+                    <input type="text" id="admin-qq-question" placeholder="e.g., How do I add a new expense?" required maxlength="255">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="admin-qq-order">Display Order</label>
+                    <input type="number" id="admin-qq-order" placeholder="1" min="1">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="admin-qq-answer">Instant Answer *</label>
+                    <textarea id="admin-qq-answer" rows="4" placeholder="Clear, concise instant answer..." required style="width: 100%; padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary); font-family: inherit; font-size: 0.92rem;"></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer;">
+                        <input type="checkbox" id="admin-qq-active" checked style="width: 18px; height: 18px; accent-color: var(--accent);">
+                        <span style="font-size: 0.9rem; color: var(--text-primary); text-transform: none; letter-spacing: normal;">Active (visible on Help & Support page)</span>
+                    </label>
+                </div>
+                <div class="form-actions" style="margin-top: 1rem;">
+                    <button type="button" class="btn-secondary" id="btn-cancel-admin-qq">Cancel</button>
+                    <button type="submit" class="btn-primary" id="btn-save-admin-qq">
+                        <i class="fas fa-save"></i> Save Quick Question
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ═══ Admin Delete Confirmation Modal ═══ -->
+    <div class="modal-overlay" id="admin-delete-modal-overlay">
+        <div class="modal modal-small" id="admin-delete-modal">
+            <div class="modal-header delete-header">
+                <h2><i class="fas fa-exclamation-triangle"></i> <span id="admin-delete-modal-title">Confirm Delete</span></h2>
+                <button class="modal-close" id="admin-delete-modal-close" title="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body-text" style="padding: 1.25rem 1.5rem;">
+                <p id="admin-delete-modal-message">Are you sure you want to delete this item? This action cannot be undone.</p>
+            </div>
+            <div class="form-actions" style="padding: 1rem 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <button type="button" class="btn-secondary" id="btn-cancel-admin-delete">Cancel</button>
+                <button type="button" class="btn-danger" id="btn-confirm-admin-delete">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- ═══ Toast Notification Container ═══ -->
     <div class="toast-container" id="toast-container"></div>
 
     <!-- App Script -->
-    <script src="/static/js/app.js?v=2.3"></script>
+    <script src="/static/js/app.js?v=3.6"></script>
 </body>
 
 </html>
