@@ -168,6 +168,12 @@ function switchView(viewName) {
     loadSupportTickets();
     loadQuickQuestions();
     loadFAQs();
+  } else if (viewName === 'settings') {
+    if (document.body && document.body.dataset && document.body.dataset.isAdmin === 'true') {
+      switchView('admin-dashboard');
+      return;
+    }
+    loadUserSettings();
   } else if (viewName === 'admin-support' || viewName === 'admin-dashboard') {
     loadAdminDashboard();
   } else if (viewName === 'admin-all-tickets') {
@@ -3751,6 +3757,734 @@ window.toggleQqActive = toggleQqActive;
 window.confirmDeleteQq = confirmDeleteQq;
 window.moveQuickQuestion = moveQuickQuestion;
 
+// ══════════════════════════════════════════════════════════════════
+// USER SETTINGS & PROFILE MANAGEMENT
+// ══════════════════════════════════════════════════════════════════
+
+let currentProfileData = null;
+let pendingAvatarFile = null;
+
+function getInitials(name) {
+  if (!name) return 'US';
+  const clean = name.trim().replace(/[^a-zA-Z0-9\s]/g, '');
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return clean.substring(0, 2).toUpperCase() || 'US';
+}
+
+function updateGlobalUserAvatar(avatarUrl, displayName) {
+  const sidebarAvatar = $('#sidebar-user-avatar');
+  const initials = getInitials(displayName);
+  if (sidebarAvatar) {
+    if (avatarUrl) {
+      sidebarAvatar.innerHTML = `<img src="${avatarUrl}" alt="Profile" class="avatar-photo" id="sidebar-avatar-img">`;
+    } else {
+      sidebarAvatar.innerHTML = `<span id="sidebar-avatar-initials">${initials}</span>`;
+    }
+  }
+
+  const sidebarName = $('#sidebar-user-name');
+  if (sidebarName && displayName) {
+    sidebarName.textContent = displayName;
+  }
+
+  const greetingName = $('#greeting-user-name');
+  if (greetingName && displayName) {
+    greetingName.textContent = displayName;
+  }
+}
+
+async function loadUserSettings() {
+  const settingsView = $('#view-settings');
+  if (!settingsView) return;
+
+  try {
+    const res = await fetch('/api/user/profile');
+    if (!res.ok) {
+      if (res.status === 403) {
+        return;
+      }
+      throw new Error('Failed to load profile data');
+    }
+    const data = await res.json();
+    currentProfileData = data.user;
+
+    const displayName = currentProfileData.username || currentProfileData.full_name || 'User';
+    const email = currentProfileData.email || '';
+    const avatarUrl = currentProfileData.avatar_url;
+    const initials = getInitials(displayName);
+
+    // Populate Username
+    const usernameVal = $('#username-display-val');
+    if (usernameVal) usernameVal.textContent = displayName;
+    const usernameInput = $('#settings-username-input');
+    if (usernameInput) usernameInput.value = currentProfileData.username || currentProfileData.full_name || '';
+
+    // Populate Email
+    const emailVal = $('#settings-email-display');
+    if (emailVal) emailVal.textContent = email;
+
+    // Populate Avatar
+    const avatarDisplay = $('#settings-avatar-display');
+    const btnRemoveAvatar = $('#btn-remove-avatar');
+    if (avatarDisplay) {
+      if (avatarUrl) {
+        avatarDisplay.innerHTML = `<img src="${avatarUrl}" alt="Profile Avatar" class="settings-avatar-img" id="settings-avatar-img">`;
+        if (btnRemoveAvatar) btnRemoveAvatar.style.display = 'inline-flex';
+      } else {
+        avatarDisplay.innerHTML = `<span class="settings-avatar-fallback" id="settings-avatar-fallback">${initials}</span>`;
+        if (btnRemoveAvatar) btnRemoveAvatar.style.display = 'none';
+      }
+    }
+
+    // Hide preview controls if they were visible
+    const previewControls = $('#avatar-preview-controls');
+    if (previewControls) previewControls.style.display = 'none';
+    const btnChoose = $('#btn-choose-avatar');
+    if (btnChoose) btnChoose.style.display = 'inline-flex';
+
+    // Synchronize sidebar
+    updateGlobalUserAvatar(avatarUrl, displayName);
+  } catch (err) {
+    console.error('Error loading user settings:', err);
+    showToast('Failed to load user profile information', 'error');
+  }
+}
+
+async function saveUsername() {
+  const input = $('#settings-username-input');
+  if (!input) return;
+  const newUsername = input.value.trim();
+
+  if (!newUsername) {
+    showToast('Username cannot be empty', 'error');
+    input.focus();
+    return;
+  }
+
+  if (newUsername.length < 3 || newUsername.length > 30) {
+    showToast('Username must be between 3 and 30 characters', 'error');
+    input.focus();
+    return;
+  }
+
+  const validRegex = /^[a-zA-Z0-9_.-]+$/;
+  if (!validRegex.test(newUsername)) {
+    showToast('Username can only contain letters, numbers, underscores, periods, and hyphens', 'error');
+    input.focus();
+    return;
+  }
+
+  const btnSave = $('#btn-save-username');
+  if (btnSave) {
+    btnSave.disabled = true;
+    btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+  }
+
+  try {
+    const res = await fetch('/api/user/username', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: newUsername })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to update username');
+    }
+
+    if (currentProfileData) {
+      currentProfileData.username = data.username;
+      currentProfileData.full_name = data.username;
+    }
+
+    const usernameVal = $('#username-display-val');
+    if (usernameVal) usernameVal.textContent = data.username;
+
+    // Toggle back to display row
+    const editForm = $('#username-edit-form');
+    const displayRow = $('#username-display-row');
+    if (editForm) editForm.style.display = 'none';
+    if (displayRow) displayRow.style.display = 'flex';
+
+    // Update global avatar initials & name if no custom photo
+    const avatarUrl = currentProfileData ? currentProfileData.avatar_url : null;
+    updateGlobalUserAvatar(avatarUrl, data.username);
+    if (!avatarUrl) {
+      const avatarDisplay = $('#settings-avatar-display');
+      if (avatarDisplay) {
+        avatarDisplay.innerHTML = `<span class="settings-avatar-fallback" id="settings-avatar-fallback">${getInitials(data.username)}</span>`;
+      }
+    }
+
+    showToast('Username updated successfully!', 'success');
+  } catch (err) {
+    console.error('saveUsername error:', err);
+    showToast(err.message || 'Failed to update username', 'error');
+  } finally {
+    if (btnSave) {
+      btnSave.disabled = false;
+      btnSave.innerHTML = '<i class="fas fa-save"></i> Save Username';
+    }
+  }
+}
+
+function handleAvatarSelection(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  const ext = file.name.split('.').pop().toLowerCase();
+  const validExts = ['jpg', 'jpeg', 'png', 'webp'];
+
+  if (!allowedTypes.includes(file.type) && !validExts.includes(ext)) {
+    showToast('Unsupported file format. Please upload JPG, PNG, or WebP.', 'error');
+    e.target.value = '';
+    return;
+  }
+
+  const maxSize = 5 * 1024 * 1024; // 5 MB
+  if (file.size > maxSize) {
+    showToast('Image size exceeds the 5 MB limit. Please select a smaller photo.', 'error');
+    e.target.value = '';
+    return;
+  }
+
+  pendingAvatarFile = file;
+
+  // Render client-side preview
+  const previewUrl = URL.createObjectURL(file);
+  const avatarDisplay = $('#settings-avatar-display');
+  if (avatarDisplay) {
+    avatarDisplay.innerHTML = `<img src="${previewUrl}" alt="Preview" class="settings-avatar-img" id="settings-avatar-img">`;
+  }
+
+  const previewControls = $('#avatar-preview-controls');
+  if (previewControls) previewControls.style.display = 'flex';
+
+  const btnChoose = $('#btn-choose-avatar');
+  if (btnChoose) btnChoose.style.display = 'none';
+
+  const btnRemove = $('#btn-remove-avatar');
+  if (btnRemove) btnRemove.style.display = 'none';
+}
+
+function cancelAvatarPreview() {
+  pendingAvatarFile = null;
+  const fileInput = $('#settings-avatar-input');
+  if (fileInput) fileInput.value = '';
+
+  const previewControls = $('#avatar-preview-controls');
+  if (previewControls) previewControls.style.display = 'none';
+
+  const btnChoose = $('#btn-choose-avatar');
+  if (btnChoose) btnChoose.style.display = 'inline-flex';
+
+  const avatarDisplay = $('#settings-avatar-display');
+  const btnRemove = $('#btn-remove-avatar');
+
+  const avatarUrl = currentProfileData ? currentProfileData.avatar_url : null;
+  const displayName = currentProfileData ? (currentProfileData.username || currentProfileData.full_name || 'User') : 'User';
+
+  if (avatarDisplay) {
+    if (avatarUrl) {
+      avatarDisplay.innerHTML = `<img src="${avatarUrl}" alt="Profile Avatar" class="settings-avatar-img" id="settings-avatar-img">`;
+      if (btnRemove) btnRemove.style.display = 'inline-flex';
+    } else {
+      avatarDisplay.innerHTML = `<span class="settings-avatar-fallback" id="settings-avatar-fallback">${getInitials(displayName)}</span>`;
+      if (btnRemove) btnRemove.style.display = 'none';
+    }
+  }
+}
+
+async function uploadAvatar() {
+  if (!pendingAvatarFile) {
+    showToast('Please select a photo first', 'error');
+    return;
+  }
+
+  const btnSave = $('#btn-save-avatar');
+  if (btnSave) {
+    btnSave.disabled = true;
+    btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+  }
+
+  const formData = new FormData();
+  formData.append('file', pendingAvatarFile);
+
+  try {
+    const res = await fetch('/api/user/profile-picture', {
+      method: 'POST',
+      body: formData
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to upload photo');
+    }
+
+    if (currentProfileData) {
+      currentProfileData.profile_picture = data.profile_picture;
+      currentProfileData.avatar_url = data.avatar_url;
+    }
+
+    const timestampedUrl = data.avatar_url + '?t=' + Date.now();
+
+    const avatarDisplay = $('#settings-avatar-display');
+    if (avatarDisplay) {
+      avatarDisplay.innerHTML = `<img src="${timestampedUrl}" alt="Profile Avatar" class="settings-avatar-img" id="settings-avatar-img">`;
+    }
+
+    const displayName = currentProfileData ? (currentProfileData.username || currentProfileData.full_name || 'User') : 'User';
+    updateGlobalUserAvatar(timestampedUrl, displayName);
+
+    pendingAvatarFile = null;
+    const fileInput = $('#settings-avatar-input');
+    if (fileInput) fileInput.value = '';
+
+    const previewControls = $('#avatar-preview-controls');
+    if (previewControls) previewControls.style.display = 'none';
+
+    const btnChoose = $('#btn-choose-avatar');
+    if (btnChoose) btnChoose.style.display = 'inline-flex';
+
+    const btnRemove = $('#btn-remove-avatar');
+    if (btnRemove) btnRemove.style.display = 'inline-flex';
+
+    showToast('Profile picture updated successfully!', 'success');
+  } catch (err) {
+    console.error('uploadAvatar error:', err);
+    showToast(err.message || 'Failed to upload photo', 'error');
+  } finally {
+    if (btnSave) {
+      btnSave.disabled = false;
+      btnSave.innerHTML = '<i class="fas fa-check"></i> Save Photo';
+    }
+  }
+}
+
+async function removeAvatar() {
+  const btnRemove = $('#btn-remove-avatar');
+  if (btnRemove) {
+    btnRemove.disabled = true;
+    btnRemove.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Removing...';
+  }
+
+  try {
+    const res = await fetch('/api/user/profile-picture', {
+      method: 'DELETE'
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to remove photo');
+    }
+
+    if (currentProfileData) {
+      currentProfileData.profile_picture = null;
+      currentProfileData.avatar_url = null;
+    }
+
+    const displayName = currentProfileData ? (currentProfileData.username || currentProfileData.full_name || 'User') : 'User';
+    const initials = getInitials(displayName);
+
+    const avatarDisplay = $('#settings-avatar-display');
+    if (avatarDisplay) {
+      avatarDisplay.innerHTML = `<span class="settings-avatar-fallback" id="settings-avatar-fallback">${initials}</span>`;
+    }
+
+    updateGlobalUserAvatar(null, displayName);
+
+    if (btnRemove) {
+      btnRemove.style.display = 'none';
+      btnRemove.disabled = false;
+      btnRemove.innerHTML = '<i class="fas fa-trash-can"></i> Remove Photo';
+    }
+
+    showToast('Profile picture removed. Default avatar restored.', 'success');
+  } catch (err) {
+    console.error('removeAvatar error:', err);
+    showToast(err.message || 'Failed to remove photo', 'error');
+    if (btnRemove) {
+      btnRemove.disabled = false;
+      btnRemove.innerHTML = '<i class="fas fa-trash-can"></i> Remove Photo';
+    }
+  }
+}
+
+function evaluatePasswordStrength(password) {
+  const criteria = {
+    length: password.length >= 8,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[!@#$%^&*(),.?":{}|<>\-_]/.test(password)
+  };
+
+  const updateReq = (id, passed, labelText) => {
+    const el = $(`#${id}`);
+    if (!el) return;
+    if (passed) {
+      el.classList.add('valid');
+      el.innerHTML = `<i class="fas fa-circle-check"></i> ${labelText}`;
+    } else {
+      el.classList.remove('valid');
+      el.innerHTML = `<i class="fas fa-circle-xmark"></i> ${labelText}`;
+    }
+  };
+
+  updateReq('req-length', criteria.length, 'At least 8 characters');
+  updateReq('req-uppercase', criteria.uppercase, 'At least one uppercase letter (A-Z)');
+  updateReq('req-lowercase', criteria.lowercase, 'At least one lowercase letter (a-z)');
+  updateReq('req-number', criteria.number, 'At least one number (0-9)');
+  updateReq('req-special', criteria.special, 'At least one special symbol (!@#$%^&*)');
+
+  const passedCount = Object.values(criteria).filter(Boolean).length;
+  const barFill = $('#pwd-strength-bar-fill');
+  const strengthText = $('#pwd-strength-text');
+
+  if (!barFill || !strengthText) return { passedCount, isAllPassed: passedCount === 5 };
+
+  barFill.className = 'pwd-strength-bar-fill';
+
+  if (!password) {
+    barFill.style.width = '0%';
+    strengthText.textContent = 'None';
+    strengthText.style.color = 'var(--text-muted)';
+  } else if (passedCount <= 2) {
+    barFill.classList.add('weak');
+    strengthText.textContent = 'Weak';
+    strengthText.style.color = 'var(--danger)';
+  } else if (passedCount <= 4) {
+    barFill.classList.add('medium');
+    strengthText.textContent = 'Medium';
+    strengthText.style.color = 'var(--warning)';
+  } else {
+    barFill.classList.add('strong');
+    strengthText.textContent = 'Strong';
+    strengthText.style.color = 'var(--success)';
+  }
+
+  return { passedCount, isAllPassed: passedCount === 5 };
+}
+
+function checkPasswordMatch() {
+  const newPwd = $('#pwd-new') ? $('#pwd-new').value : '';
+  const confirmPwd = $('#pwd-confirm') ? $('#pwd-confirm').value : '';
+  const matchHint = $('#pwd-match-hint');
+  if (!matchHint) return false;
+
+  if (!confirmPwd) {
+    matchHint.textContent = '';
+    matchHint.className = 'pwd-match-hint';
+    return false;
+  }
+
+  if (newPwd === confirmPwd) {
+    matchHint.textContent = '✓ Passwords match';
+    matchHint.className = 'pwd-match-hint match';
+    return true;
+  } else {
+    matchHint.textContent = '✕ Passwords do not match';
+    matchHint.className = 'pwd-match-hint mismatch';
+    return false;
+  }
+}
+
+async function savePassword() {
+  const currentPwd = $('#pwd-current') ? $('#pwd-current').value : '';
+  const newPwd = $('#pwd-new') ? $('#pwd-new').value : '';
+  const confirmPwd = $('#pwd-confirm') ? $('#pwd-confirm').value : '';
+
+  if (!currentPwd) {
+    showToast('Current password is required', 'error');
+    if ($('#pwd-current')) $('#pwd-current').focus();
+    return;
+  }
+
+  if (!newPwd) {
+    showToast('New password is required', 'error');
+    if ($('#pwd-new')) $('#pwd-new').focus();
+    return;
+  }
+
+  if (!confirmPwd) {
+    showToast('Please confirm your new password', 'error');
+    if ($('#pwd-confirm')) $('#pwd-confirm').focus();
+    return;
+  }
+
+  if (currentPwd === newPwd) {
+    showToast('New password cannot be the same as your current password', 'error');
+    return;
+  }
+
+  if (newPwd !== confirmPwd) {
+    showToast('New password and confirmation do not match', 'error');
+    return;
+  }
+
+  const { isAllPassed } = evaluatePasswordStrength(newPwd);
+  if (!isAllPassed) {
+    showToast('Please ensure your new password satisfies all strength requirements', 'error');
+    return;
+  }
+
+  const btnUpdate = $('#btn-update-password');
+  if (btnUpdate) {
+    btnUpdate.disabled = true;
+    btnUpdate.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating Password...';
+  }
+
+  try {
+    const res = await fetch('/api/user/password', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        current_password: currentPwd,
+        new_password: newPwd,
+        confirm_password: confirmPwd
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to update password');
+    }
+
+    // Reset password inputs
+    if ($('#pwd-current')) $('#pwd-current').value = '';
+    if ($('#pwd-new')) $('#pwd-new').value = '';
+    if ($('#pwd-confirm')) $('#pwd-confirm').value = '';
+
+    evaluatePasswordStrength('');
+    checkPasswordMatch();
+
+    showToast('Password updated successfully! A security notice was sent to your email.', 'success');
+  } catch (err) {
+    console.error('savePassword error:', err);
+    showToast(err.message || 'Failed to update password', 'error');
+  } finally {
+    if (btnUpdate) {
+      btnUpdate.disabled = false;
+      btnUpdate.innerHTML = '<i class="fas fa-key"></i> Update Password';
+    }
+  }
+}
+
+function openDeleteAccountModal() {
+  const modal = $('#delete-account-modal-overlay');
+  if (!modal) return;
+  const pwdInput = $('#modal-delete-password');
+  const phraseInput = $('#modal-delete-confirm-phrase');
+  const confirmBtn = $('#btn-modal-confirm-delete');
+
+  if (pwdInput) pwdInput.value = '';
+  if (phraseInput) phraseInput.value = '';
+  if (confirmBtn) confirmBtn.disabled = true;
+
+  modal.classList.add('active');
+  if (pwdInput) pwdInput.focus();
+}
+
+function closeDeleteAccountModal() {
+  const modal = $('#delete-account-modal-overlay');
+  if (modal) modal.classList.remove('active');
+}
+
+function updateDeleteModalButtonState() {
+  const pwd = $('#modal-delete-password') ? $('#modal-delete-password').value : '';
+  const phrase = $('#modal-delete-confirm-phrase') ? $('#modal-delete-confirm-phrase').value.trim() : '';
+  const confirmBtn = $('#btn-modal-confirm-delete');
+  if (confirmBtn) {
+    confirmBtn.disabled = !(phrase === 'DELETE' && pwd.length > 0);
+  }
+}
+
+async function executeDeleteAccount() {
+  const pwd = $('#modal-delete-password') ? $('#modal-delete-password').value : '';
+  const phrase = $('#modal-delete-confirm-phrase') ? $('#modal-delete-confirm-phrase').value.trim() : '';
+
+  if (!pwd) {
+    showToast('Please enter your current password', 'error');
+    return;
+  }
+
+  if (phrase !== 'DELETE') {
+    showToast('Please type DELETE exactly to confirm', 'error');
+    return;
+  }
+
+  const confirmBtn = $('#btn-modal-confirm-delete');
+  if (confirmBtn) {
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Deleting Account...';
+  }
+
+  try {
+    const res = await fetch('/api/user/delete-account', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        current_password: pwd,
+        confirm_phrase: phrase
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to delete account');
+    }
+
+    closeDeleteAccountModal();
+    sessionStorage.setItem('pendingToast', JSON.stringify({
+      message: 'Your account and personal data were deleted successfully.',
+      type: 'info'
+    }));
+
+    window.location.href = data.redirect_url || '/login';
+  } catch (err) {
+    console.error('executeDeleteAccount error:', err);
+    showToast(err.message || 'Failed to delete account', 'error');
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = '<i class="fas fa-trash-can"></i> Permanently Delete My Account';
+    }
+  }
+}
+
+function initUserSettingsListeners() {
+  // Username editing toggle
+  const btnEditUsername = $('#btn-edit-username');
+  const btnCancelUsername = $('#btn-cancel-username');
+  const usernameDisplayRow = $('#username-display-row');
+  const usernameEditForm = $('#username-edit-form');
+  const usernameInput = $('#settings-username-input');
+
+  if (btnEditUsername) {
+    btnEditUsername.addEventListener('click', () => {
+      if (usernameDisplayRow) usernameDisplayRow.style.display = 'none';
+      if (usernameEditForm) usernameEditForm.style.display = 'block';
+      if (usernameInput) {
+        usernameInput.value = ($('#username-display-val') ? $('#username-display-val').textContent.trim() : '');
+        usernameInput.focus();
+      }
+    });
+  }
+
+  if (btnCancelUsername) {
+    btnCancelUsername.addEventListener('click', () => {
+      if (usernameEditForm) usernameEditForm.style.display = 'none';
+      if (usernameDisplayRow) usernameDisplayRow.style.display = 'flex';
+    });
+  }
+
+  const btnSaveUsername = $('#btn-save-username');
+  if (btnSaveUsername) {
+    btnSaveUsername.addEventListener('click', saveUsername);
+  }
+  if (usernameEditForm) {
+    usernameEditForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      saveUsername();
+    });
+  }
+
+  // Profile Picture Controls
+  const btnChooseAvatar = $('#btn-choose-avatar');
+  const avatarInput = $('#settings-avatar-input');
+  if (btnChooseAvatar && avatarInput) {
+    btnChooseAvatar.addEventListener('click', () => avatarInput.click());
+    avatarInput.addEventListener('change', handleAvatarSelection);
+  }
+
+  const btnCancelAvatar = $('#btn-cancel-avatar');
+  if (btnCancelAvatar) {
+    btnCancelAvatar.addEventListener('click', cancelAvatarPreview);
+  }
+
+  const btnSaveAvatar = $('#btn-save-avatar');
+  if (btnSaveAvatar) {
+    btnSaveAvatar.addEventListener('click', uploadAvatar);
+  }
+
+  const btnRemoveAvatar = $('#btn-remove-avatar');
+  if (btnRemoveAvatar) {
+    btnRemoveAvatar.addEventListener('click', removeAvatar);
+  }
+
+  // Password visibility eye toggles
+  $$('.pwd-toggle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.dataset.target;
+      const targetInput = $(`#${targetId}`);
+      if (!targetInput) return;
+      const isPwd = targetInput.type === 'password';
+      targetInput.type = isPwd ? 'text' : 'password';
+      const icon = btn.querySelector('i');
+      if (icon) {
+        icon.className = isPwd ? 'fas fa-eye-slash' : 'fas fa-eye';
+      }
+    });
+  });
+
+  // Password Strength & Match listeners
+  const pwdNew = $('#pwd-new');
+  if (pwdNew) {
+    pwdNew.addEventListener('input', () => {
+      evaluatePasswordStrength(pwdNew.value);
+      checkPasswordMatch();
+    });
+  }
+
+  const pwdConfirm = $('#pwd-confirm');
+  if (pwdConfirm) {
+    pwdConfirm.addEventListener('input', checkPasswordMatch);
+  }
+
+  const btnUpdatePassword = $('#btn-update-password');
+  if (btnUpdatePassword) {
+    btnUpdatePassword.addEventListener('click', savePassword);
+  }
+  const passwordForm = $('#settings-password-form');
+  if (passwordForm) {
+    passwordForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      savePassword();
+    });
+  }
+
+  // Delete Account Modal
+  const btnOpenDelete = $('#btn-open-delete-account');
+  if (btnOpenDelete) {
+    btnOpenDelete.addEventListener('click', openDeleteAccountModal);
+  }
+
+  const btnCloseModal = $('#delete-account-modal-close');
+  if (btnCloseModal) {
+    btnCloseModal.addEventListener('click', closeDeleteAccountModal);
+  }
+
+  const btnCancelModal = $('#btn-modal-cancel-delete');
+  if (btnCancelModal) {
+    btnCancelModal.addEventListener('click', closeDeleteAccountModal);
+  }
+
+  const modalOverlay = $('#delete-account-modal-overlay');
+  if (modalOverlay) {
+    modalOverlay.addEventListener('click', (e) => {
+      if (e.target === modalOverlay) closeDeleteAccountModal();
+    });
+  }
+
+  const deletePwd = $('#modal-delete-password');
+  const deletePhrase = $('#modal-delete-confirm-phrase');
+  if (deletePwd) deletePwd.addEventListener('input', updateDeleteModalButtonState);
+  if (deletePhrase) deletePhrase.addEventListener('input', updateDeleteModalButtonState);
+
+  const btnConfirmDelete = $('#btn-modal-confirm-delete');
+  if (btnConfirmDelete) {
+    btnConfirmDelete.addEventListener('click', executeDeleteAccount);
+  }
+}
+
 // ── App Init ───────────────────────────────────────────────────
 function initApp() {
   initTheme();
@@ -3766,6 +4500,12 @@ function initApp() {
     initAdminSuiteListeners();
   } catch (err) {
     console.error('initAdminSuiteListeners error:', err);
+  }
+
+  try {
+    initUserSettingsListeners();
+  } catch (err) {
+    console.error('initUserSettingsListeners error:', err);
   }
 
   // Determine target view from URL query parameter or body data-active-view

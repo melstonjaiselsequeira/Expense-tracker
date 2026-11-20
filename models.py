@@ -26,6 +26,8 @@ class User(db.Model):
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
     monthly_budget = db.Column(db.Float, default=1000.0, nullable=True)
+    username = db.Column(db.String(80), unique=True, nullable=True, index=True)
+    profile_picture = db.Column(db.String(255), nullable=True)
 
     # Relationship to expenses and support tickets
     expenses = db.relationship("Expense", backref="user", lazy=True, cascade="all, delete-orphan")
@@ -53,6 +55,28 @@ class User(db.Model):
         import os
         admin_emails = [e.strip().lower() for e in os.getenv('ADMIN_EMAILS', '').split(',') if e.strip()]
         return bool(self.is_admin or (self.email and self.email.lower() in admin_emails))
+
+    @property
+    def display_name(self):
+        return self.username or self.full_name or 'User'
+
+    @property
+    def avatar_url(self):
+        if self.profile_picture:
+            return f"/static/uploads/profile_pictures/{self.profile_picture}"
+        return None
+
+    def to_profile_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username or self.full_name,
+            'full_name': self.full_name,
+            'email': self.email,
+            'profile_picture': self.profile_picture,
+            'avatar_url': self.avatar_url,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'is_admin': self.is_admin_user
+        }
 
     def get_id(self):
         return str(self.id)

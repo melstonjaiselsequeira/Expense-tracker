@@ -155,6 +155,12 @@ def init_db(app):
                 if 'is_admin' not in cols:
                     db.session.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE"))
                     db.session.commit()
+                if 'username' not in cols:
+                    db.session.execute(text("ALTER TABLE users ADD COLUMN username VARCHAR(80)"))
+                    db.session.commit()
+                if 'profile_picture' not in cols:
+                    db.session.execute(text("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255)"))
+                    db.session.commit()
             if 'expenses' in insp.get_table_names():
                 cols = [c['name'] for c in insp.get_columns('expenses')]
                 if 'status' not in cols:

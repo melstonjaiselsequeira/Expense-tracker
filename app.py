@@ -1,6 +1,7 @@
 import os
 import csv
 import io
+import re
 import uuid
 from functools import wraps
 from datetime import datetime, timedelta
@@ -318,6 +319,8 @@ def dashboard():
         session.clear()
         return redirect(url_for('login'))
     view = request.args.get('view')
+    if view == 'settings' and current_user.is_admin_user:
+        return redirect(url_for('dashboard') + '?view=admin-dashboard')
     if not view and current_user.is_admin_user:
         return redirect(url_for('dashboard') + '?view=admin-dashboard')
     active_view = view or ('admin-dashboard' if current_user.is_admin_user else 'dashboard')
@@ -842,6 +845,24 @@ def admin_required(f):
             return jsonify({'error': 'Admin authorization required', 'code': 'FORBIDDEN'}), 403
         return f(*args, **kwargs)
     return decorated_function
+
+
+def user_only_required(f):
+    """Decorator to restrict access strictly to authenticated normal users (blocks administrators)."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return jsonify({'error': 'Authentication required', 'code': 'UNAUTHORIZED'}), 401
+        if getattr(current_user, 'is_admin_user', False):
+            return jsonify({'error': 'Settings are only accessible to normal user accounts', 'code': 'FORBIDDEN'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+PROFILE_PICS_DIR = os.path.join(app.root_path, 'static', 'uploads', 'profile_pictures')
+os.makedirs(PROFILE_PICS_DIR, exist_ok=True)
+ALLOWED_AVATAR_EXTENSIONS = {'jpg', 'jpeg', 'png', 'webp'}
+MAX_AVATAR_SIZE = 5 * 1024 * 1024  # 5 MB
 
 
 def generate_ticket_id():
@@ -2405,6 +2426,291 @@ def send_monthly_reports():
                 send_email_with_attachment(user.email, subject, body, pdf_buf.getvalue(), f'report_{year}_{month:02d}.pdf')
             except Exception as e:
                 print(f'Failed to send report to {user.email}: {e}')
+
+# ── User Account Settings & Profile Management (User Only) ────────
+@app.route('/api/user/profile', methods=['GET'])
+@login_required
+@user_only_required
+def get_user_profile():
+    """Retrieve personal profile information for the authenticated user."""
+    return jsonify({
+        'user': current_user.to_profile_dict()
+    }), 200
+
+
+@app.route('/api/user/username', methods=['PUT'])
+@login_required
+@user_only_required
+@csrf.exempt
+def update_username():
+    """Update username for the currently logged-in user with uniqueness validation."""
+    data = request.get_json(silent=True) or {}
+    new_username = (data.get('username') or '').strip()
+
+    if not new_username:
+        return jsonify({'error': 'Username cannot be empty', 'code': 'VALIDATION_ERROR'}), 400
+
+    if len(new_username) < 3 or len(new_username) > 30:
+        return jsonify({'error': 'Username must be between 3 and 30 characters', 'code': 'VALIDATION_ERROR'}), 400
+
+    if not re.match(r'^[a-zA-Z0-9_.-]+$', new_username):
+        return jsonify({
+            'error': 'Username can only contain letters, numbers, underscores, periods, and hyphens',
+            'code': 'VALIDATION_ERROR'
+        }), 400
+
+    # Case-insensitive availability check across other accounts
+    existing = User.query.filter(
+        db.or_(
+            db.func.lower(User.username) == new_username.lower(),
+            db.and_(User.username.is_(None), db.func.lower(User.full_name) == new_username.lower())
+        ),
+        User.id != current_user.id
+    ).first()
+
+    if existing:
+        return jsonify({'error': 'Username is already taken. Please choose another.', 'code': 'USERNAME_TAKEN'}), 400
+
+    try:
+        current_user.username = new_username
+        current_user.full_name = new_username
+        db.session.commit()
+        return jsonify({
+            'message': 'Username updated successfully',
+            'username': new_username,
+            'user': current_user.to_profile_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Failed to update username: {str(e)}'}), 500
+
+
+@app.route('/api/user/profile-picture', methods=['POST'])
+@login_required
+@user_only_required
+@csrf.exempt
+def upload_profile_picture():
+    """Upload and set a new profile picture for the currently authenticated user."""
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part provided', 'code': 'NO_FILE'}), 400
+
+    file = request.files['file']
+    if not file or not file.filename:
+        return jsonify({'error': 'No file selected', 'code': 'NO_FILE'}), 400
+
+    filename = secure_filename(file.filename)
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+    if ext not in ALLOWED_AVATAR_EXTENSIONS:
+        return jsonify({
+            'error': 'Unsupported file format. Please upload JPG, PNG, or WebP images.',
+            'code': 'INVALID_FORMAT'
+        }), 400
+
+    # Validate file size (max 5 MB)
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_AVATAR_SIZE:
+        return jsonify({'error': 'File size exceeds maximum limit of 5 MB', 'code': 'FILE_TOO_LARGE'}), 400
+    if size == 0:
+        return jsonify({'error': 'Uploaded file is empty', 'code': 'EMPTY_FILE'}), 400
+
+    saved_name = f"avatar_{current_user.id}_{uuid.uuid4().hex[:8]}.{ext}"
+    save_path = os.path.join(PROFILE_PICS_DIR, saved_name)
+
+    try:
+        # Clean up old file if safe
+        if current_user.profile_picture:
+            old_path = os.path.join(PROFILE_PICS_DIR, current_user.profile_picture)
+            if os.path.exists(old_path) and os.path.isfile(old_path):
+                try:
+                    os.remove(old_path)
+                except Exception:
+                    pass
+
+        file.save(save_path)
+        current_user.profile_picture = saved_name
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Profile picture updated successfully',
+            'profile_picture': saved_name,
+            'avatar_url': current_user.avatar_url,
+            'user': current_user.to_profile_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        if os.path.exists(save_path):
+            try:
+                os.remove(save_path)
+            except Exception:
+                pass
+        return jsonify({'error': f'Failed to upload profile picture: {str(e)}'}), 500
+
+
+@app.route('/api/user/profile-picture', methods=['DELETE'])
+@login_required
+@user_only_required
+@csrf.exempt
+def remove_profile_picture():
+    """Remove custom profile picture and revert to standard avatar."""
+    if not current_user.profile_picture:
+        return jsonify({
+            'message': 'Default avatar already in use',
+            'avatar_url': None,
+            'user': current_user.to_profile_dict()
+        }), 200
+
+    try:
+        old_path = os.path.join(PROFILE_PICS_DIR, current_user.profile_picture)
+        if os.path.exists(old_path) and os.path.isfile(old_path):
+            try:
+                os.remove(old_path)
+            except Exception:
+                pass
+
+        current_user.profile_picture = None
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Profile picture removed successfully',
+            'avatar_url': None,
+            'user': current_user.to_profile_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Failed to remove profile picture: {str(e)}'}), 500
+
+
+@app.route('/api/user/password', methods=['PUT'])
+@login_required
+@user_only_required
+@csrf.exempt
+def change_password():
+    """Change account password with verification, strength checks, and email notification."""
+    data = request.get_json(silent=True) or {}
+    current_password = data.get('current_password', '')
+    new_password = data.get('new_password', '')
+    confirm_password = data.get('confirm_password', '')
+
+    if not current_password:
+        return jsonify({'error': 'Current password is required', 'code': 'MISSING_FIELD'}), 400
+    if not new_password:
+        return jsonify({'error': 'New password is required', 'code': 'MISSING_FIELD'}), 400
+    if not confirm_password:
+        return jsonify({'error': 'Please confirm your new password', 'code': 'MISSING_FIELD'}), 400
+
+    if not current_user.check_password(current_password):
+        return jsonify({'error': 'Incorrect current password', 'code': 'INVALID_CURRENT_PASSWORD'}), 400
+
+    if new_password != confirm_password:
+        return jsonify({'error': 'New password and confirmation do not match', 'code': 'PASSWORD_MISMATCH'}), 400
+
+    if current_user.check_password(new_password):
+        return jsonify({'error': 'New password cannot be the same as your current password', 'code': 'PASSWORD_REUSED'}), 400
+
+    # Password strength check
+    if len(new_password) < 8:
+        return jsonify({'error': 'Password must be at least 8 characters long', 'code': 'WEAK_PASSWORD'}), 400
+    if not re.search(r'[A-Z]', new_password):
+        return jsonify({'error': 'Password must contain at least one uppercase letter', 'code': 'WEAK_PASSWORD'}), 400
+    if not re.search(r'[a-z]', new_password):
+        return jsonify({'error': 'Password must contain at least one lowercase letter', 'code': 'WEAK_PASSWORD'}), 400
+    if not re.search(r'[0-9]', new_password):
+        return jsonify({'error': 'Password must contain at least one number', 'code': 'WEAK_PASSWORD'}), 400
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>\-_]', new_password):
+        return jsonify({'error': 'Password must contain at least one special character (!@#$%^&*)', 'code': 'WEAK_PASSWORD'}), 400
+
+    try:
+        current_user.set_password(new_password)
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Failed to update password: {str(e)}'}), 500
+
+    # Send email notification after successful password change
+    try:
+        change_time = datetime.utcnow().strftime('%B %d, %Y at %H:%M UTC')
+        support_url = f"{get_app_url()}/dashboard?view=support"
+        email_html = build_email_html(
+            title="Your ExpenseFlow Password Has Been Changed",
+            recipient_email=current_user.email,
+            description_text=(
+                f"Hello {current_user.display_name},<br><br>"
+                f"This email confirms that the password for your ExpenseFlow account (<strong>{current_user.email}</strong>) "
+                f"was successfully changed on <strong>{change_time}</strong>.<br><br>"
+                f"<strong>Security Notice:</strong> If you made this change, no further action is required.<br>"
+                f"If you did <strong>NOT</strong> make this change, please contact our support team immediately or reset your password to protect your account."
+            ),
+            button_text="Contact Help & Support",
+            button_url=support_url,
+            note_text="For your security, ExpenseFlow notifies you whenever sensitive security credentials are changed."
+        )
+        send_email(
+            current_user.email,
+            'Your ExpenseFlow Password Has Been Changed',
+            f"Hello {current_user.display_name},\n\nYour ExpenseFlow account password was successfully changed on {change_time}.\n\nIf you did not make this change, please contact support immediately at: {support_url}",
+            html_body=email_html
+        )
+    except Exception as e:
+        print(f"Error sending password change email notification to {current_user.email}: {e}")
+
+    return jsonify({'message': 'Password changed successfully'}), 200
+
+
+@app.route('/api/user/delete-account', methods=['POST'])
+@login_required
+@user_only_required
+@csrf.exempt
+def delete_user_account():
+    """Permanently delete user account and associated data after password & confirmation phrase verification."""
+    # Critical protection: block admins from deleting via this endpoint
+    if current_user.is_admin or current_user.is_admin_user:
+        return jsonify({'error': 'Administrator accounts cannot be deleted through this interface', 'code': 'FORBIDDEN'}), 403
+
+    data = request.get_json(silent=True) or {}
+    current_password = data.get('current_password', '')
+    confirm_phrase = (data.get('confirm_phrase') or '').strip()
+
+    if not current_password:
+        return jsonify({'error': 'Current password is required to verify your identity', 'code': 'MISSING_PASSWORD'}), 400
+
+    if confirm_phrase != 'DELETE':
+        return jsonify({'error': 'Please type DELETE exactly to confirm account deletion', 'code': 'INVALID_CONFIRMATION'}), 400
+
+    if not current_user.check_password(current_password):
+        return jsonify({'error': 'Incorrect password. Account deletion aborted.', 'code': 'INVALID_PASSWORD'}), 400
+
+    user_to_delete = db.session.get(User, current_user.id)
+    if not user_to_delete:
+        return jsonify({'error': 'User not found'}), 404
+
+    try:
+        # Clean up profile picture from disk
+        if user_to_delete.profile_picture:
+            pic_path = os.path.join(PROFILE_PICS_DIR, user_to_delete.profile_picture)
+            if os.path.exists(pic_path) and os.path.isfile(pic_path):
+                try:
+                    os.remove(pic_path)
+                except Exception:
+                    pass
+
+        # Clear authentication session
+        logout_user()
+        session.clear()
+
+        # Delete user record (cascading deletes expenses, support_tickets, report_history)
+        db.session.delete(user_to_delete)
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Account deleted successfully',
+            'redirect_url': '/login'
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Failed to delete account: {str(e)}'}), 500
+
 
 class Config:
     SCHEDULER_API_ENABLED = True

@@ -25,7 +25,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- App Styles -->
-    <link rel="stylesheet" href="/static/css/style.css?v=4.0">
+    <link rel="stylesheet" href="/static/css/style.css?v=4.1">
 
     <!-- Early Theme Initialization to prevent flicker -->
     <script>
@@ -57,11 +57,15 @@
         <!-- Logged in User Profile Info -->
         <div class="sidebar-user" id="sidebar-user">
             <div class="sidebar-user-avatar" id="sidebar-user-avatar">
-                {{ current_user.full_name[:2].upper() if current_user.full_name else 'US' }}
+                {% if current_user.profile_picture %}
+                <img src="/static/uploads/profile_pictures/{{ current_user.profile_picture }}" alt="Profile" class="avatar-photo" id="sidebar-avatar-img">
+                {% else %}
+                <span id="sidebar-avatar-initials">{{ current_user.display_name[:2].upper() if current_user.display_name else 'US' }}</span>
+                {% endif %}
             </div>
             <div class="sidebar-user-info">
                 <div class="sidebar-user-name" id="sidebar-user-name">
-                    {{ current_user.full_name or 'User' }}
+                    {{ current_user.display_name or 'User' }}
                 </div>
                 <div class="sidebar-user-email" id="sidebar-user-email">
                     {{ current_user.email or '' }}
@@ -143,6 +147,10 @@
                 <i class="fas fa-headset"></i>
                 <span>Help & Support</span>
             </a>
+            <a href="#" class="nav-item {% if active_view == 'settings' %}active{% endif %}" data-view="settings" id="nav-settings" title="Settings">
+                <i class="fas fa-gear"></i>
+                <span>Settings</span>
+            </a>
             {% endif %}
         </nav>
 
@@ -176,7 +184,7 @@
         <!-- Top Greeting Bar (Dashboard View Only) -->
         <div class="top-nav-bar" id="global-top-header"{% if active_view != 'dashboard' %} style="display: none;"{% endif %}>
             <div class="top-greeting">
-                <h2 id="greeting-text">Welcome back, {{ current_user.full_name or 'there' }}! 👋</h2>
+                <h2 id="greeting-text">Welcome back, <span id="greeting-user-name">{{ current_user.display_name or 'there' }}</span>! 👋</h2>
                 <p id="current-date-text">Loading today's date...</p>
             </div>
             <div class="top-actions">
@@ -947,6 +955,238 @@
                 </div>
             </div>
         </section>
+
+        {% if not current_user.is_admin_user %}
+        <!-- ══════════════════════════════════════════════════════════════════
+             USER SETTINGS VIEW (NORMAL USERS ONLY)
+        ══════════════════════════════════════════════════════════════════ -->
+        <section class="view {% if active_view == 'settings' %}active{% endif %}" id="view-settings">
+            <div class="view-header">
+                <div>
+                    <h1><i class="fas fa-gear" style="color: var(--accent); margin-right: 0.5rem;"></i> Settings</h1>
+                    <p class="subtitle">Manage your account information, profile and security preferences.</p>
+                </div>
+            </div>
+
+            <div class="settings-grid">
+                <!-- ── Card 1: Profile Information ── -->
+                <div class="chart-card settings-card" id="settings-card-profile">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-user-gear" style="color: var(--accent); margin-right: 0.5rem;"></i> Profile Information</h3>
+                    </div>
+                    <div class="settings-card-body">
+                        <!-- Profile Picture Subsection -->
+                        <div class="settings-avatar-section">
+                            <div class="settings-avatar-wrapper">
+                                <div class="settings-avatar-display" id="settings-avatar-display">
+                                    {% if current_user.profile_picture %}
+                                    <img src="/static/uploads/profile_pictures/{{ current_user.profile_picture }}" alt="Profile Avatar" class="settings-avatar-img" id="settings-avatar-img">
+                                    {% else %}
+                                    <span class="settings-avatar-fallback" id="settings-avatar-fallback">{{ current_user.display_name[:2].upper() if current_user.display_name else 'US' }}</span>
+                                    {% endif %}
+                                </div>
+                                <div class="settings-avatar-meta">
+                                    <h4 class="settings-avatar-title">Profile Picture</h4>
+                                    <p class="settings-avatar-hint">Upload a JPG, PNG, or WebP photo (max 5 MB). Displayed across your personal workspace.</p>
+                                    <div class="settings-avatar-actions">
+                                        <input type="file" id="settings-avatar-input" accept="image/jpeg,image/png,image/webp" style="display: none;">
+                                        <button type="button" class="btn-secondary btn-sm" id="btn-choose-avatar">
+                                            <i class="fas fa-camera"></i> Change Photo
+                                        </button>
+                                        <button type="button" class="btn-danger-outline btn-sm" id="btn-remove-avatar" {% if not current_user.profile_picture %}style="display: none;"{% endif %}>
+                                            <i class="fas fa-trash-can"></i> Remove Photo
+                                        </button>
+                                    </div>
+                                    <!-- Pending Avatar Upload Action Bar -->
+                                    <div class="avatar-preview-controls" id="avatar-preview-controls" style="display: none;">
+                                        <span class="preview-badge"><i class="fas fa-image"></i> New preview ready to save</span>
+                                        <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                            <button type="button" class="btn-primary btn-sm" id="btn-save-avatar">
+                                                <i class="fas fa-check"></i> Save Photo
+                                            </button>
+                                            <button type="button" class="btn-secondary btn-sm" id="btn-cancel-avatar">
+                                                <i class="fas fa-times"></i> Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Username Form Subsection -->
+                        <div class="settings-field-group">
+                            <label class="settings-field-label">Username</label>
+                            <!-- Username Display Row -->
+                            <div class="settings-field-row" id="username-display-row">
+                                <div class="settings-value-box">
+                                    <i class="fas fa-user settings-box-icon"></i>
+                                    <span class="settings-value-text" id="username-display-val">{{ current_user.username or current_user.full_name or 'User' }}</span>
+                                </div>
+                                <button type="button" class="btn-secondary" id="btn-edit-username">
+                                    <i class="fas fa-pen-to-square"></i> Edit Username
+                                </button>
+                            </div>
+                            <!-- Username Edit Form Row (Hidden initially) -->
+                            <form id="username-edit-form" class="settings-edit-form" style="display: none;" onsubmit="return false;">
+                                <div class="settings-input-group">
+                                    <i class="fas fa-user settings-input-icon"></i>
+                                    <input type="text" id="settings-username-input" class="settings-input" placeholder="Enter username (3-30 characters)" maxlength="30" autocomplete="username">
+                                </div>
+                                <div class="settings-form-actions">
+                                    <button type="button" class="btn-secondary" id="btn-cancel-username">Cancel</button>
+                                    <button type="button" class="btn-primary" id="btn-save-username">
+                                        <i class="fas fa-save"></i> Save Username
+                                    </button>
+                                </div>
+                                <div class="settings-hint">Allowed: 3 to 30 characters (letters, numbers, hyphens, periods, or underscores). Must be unique.</div>
+                            </form>
+                        </div>
+
+                        <!-- Email Display (Read-Only) Subsection -->
+                        <div class="settings-field-group">
+                            <label class="settings-field-label">Registered Email</label>
+                            <div class="settings-field-row">
+                                <div class="settings-value-box readonly">
+                                    <i class="fas fa-envelope settings-box-icon"></i>
+                                    <span class="settings-value-text" id="settings-email-display">{{ current_user.email }}</span>
+                                    <span class="settings-verified-badge"><i class="fas fa-circle-check"></i> Verified</span>
+                                </div>
+                            </div>
+                            <div class="settings-hint"><i class="fas fa-lock"></i> Your registered email address is fixed for security and cannot be changed directly. Contact Help & Support if you require an email update.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Card 2: Account Security ── -->
+                <div class="chart-card settings-card" id="settings-card-security">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-shield-halved" style="color: var(--accent); margin-right: 0.5rem;"></i> Account Security</h3>
+                    </div>
+                    <div class="settings-card-body">
+                        <p class="settings-section-desc">Keep your account protected with a strong, distinct password.</p>
+                        
+                        <form id="settings-password-form" class="settings-security-form" onsubmit="return false;">
+                            <!-- Current Password -->
+                            <div class="form-group" style="margin-bottom: 1.25rem;">
+                                <label for="pwd-current">Current Password *</label>
+                                <div class="pwd-input-wrapper">
+                                    <input type="password" id="pwd-current" class="settings-input" placeholder="Enter your current password" required autocomplete="current-password">
+                                    <button type="button" class="pwd-toggle-btn" data-target="pwd-current" title="Toggle password visibility">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- New Password -->
+                            <div class="form-group" style="margin-bottom: 1.25rem;">
+                                <label for="pwd-new">New Password *</label>
+                                <div class="pwd-input-wrapper">
+                                    <input type="password" id="pwd-new" class="settings-input" placeholder="Enter a strong new password" required autocomplete="new-password">
+                                    <button type="button" class="pwd-toggle-btn" data-target="pwd-new" title="Toggle password visibility">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <!-- Password Strength Meter -->
+                                <div class="pwd-strength-container" id="pwd-strength-container">
+                                    <div class="pwd-strength-bar-track">
+                                        <div class="pwd-strength-bar-fill" id="pwd-strength-bar-fill"></div>
+                                    </div>
+                                    <div class="pwd-strength-meta">
+                                        <span class="pwd-strength-label">Password Strength: <strong id="pwd-strength-text">None</strong></span>
+                                    </div>
+                                    <ul class="pwd-requirements-list" id="pwd-requirements-list">
+                                        <li id="req-length"><i class="fas fa-circle-xmark"></i> At least 8 characters</li>
+                                        <li id="req-uppercase"><i class="fas fa-circle-xmark"></i> At least one uppercase letter (A-Z)</li>
+                                        <li id="req-lowercase"><i class="fas fa-circle-xmark"></i> At least one lowercase letter (a-z)</li>
+                                        <li id="req-number"><i class="fas fa-circle-xmark"></i> At least one number (0-9)</li>
+                                        <li id="req-special"><i class="fas fa-circle-xmark"></i> At least one special symbol (!@#$%^&*)</li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <!-- Confirm New Password -->
+                            <div class="form-group" style="margin-bottom: 1.25rem;">
+                                <label for="pwd-confirm">Confirm New Password *</label>
+                                <div class="pwd-input-wrapper">
+                                    <input type="password" id="pwd-confirm" class="settings-input" placeholder="Re-enter your new password" required autocomplete="new-password">
+                                    <button type="button" class="pwd-toggle-btn" data-target="pwd-confirm" title="Toggle password visibility">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="pwd-match-hint" id="pwd-match-hint"></div>
+                            </div>
+
+                            <div class="security-email-notice">
+                                <i class="fas fa-envelope-shield" style="color: var(--accent); font-size: 1.15rem; flex-shrink: 0;"></i>
+                                <span>An automated security notice email will be sent to <strong>{{ current_user.email }}</strong> upon changing your password.</span>
+                            </div>
+
+                            <div class="form-actions" style="margin-top: 1.25rem;">
+                                <button type="button" class="btn-primary" id="btn-update-password">
+                                    <i class="fas fa-key"></i> Update Password
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- ── Card 3: Account Management (Danger Zone) ── -->
+                <div class="chart-card settings-card settings-danger-card" id="settings-card-danger">
+                    <div class="chart-header danger-header">
+                        <h3><i class="fas fa-triangle-exclamation" style="color: var(--danger); margin-right: 0.5rem;"></i> Account Management</h3>
+                        <span class="danger-badge">Danger Zone</span>
+                    </div>
+                    <div class="settings-card-body">
+                        <div class="danger-box-content">
+                            <div>
+                                <h4 style="margin: 0 0 0.4rem 0; font-size: 1rem; color: var(--text-primary);">Delete Account Permanently</h4>
+                                <p style="margin: 0; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5;">
+                                    Permanently delete your ExpenseFlow account and all associated personal records. All of your expenses, transaction history, budget goals, support tickets, and report downloads will be permanently erased.
+                                </p>
+                            </div>
+                            <button type="button" class="btn-danger" id="btn-open-delete-account" style="white-space: nowrap; margin-top: 1.15rem;">
+                                <i class="fas fa-trash-can"></i> Delete Account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ Delete Account Confirmation Modal ═══ -->
+        <div class="modal-overlay" id="delete-account-modal-overlay">
+            <div class="modal modal-small" id="delete-account-modal">
+                <div class="modal-header delete-header">
+                    <h2><i class="fas fa-triangle-exclamation"></i> Delete Account Permanently</h2>
+                    <button class="modal-close" id="delete-account-modal-close" title="Close"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body-text" style="padding: 1.25rem 1.5rem;">
+                    <div class="danger-alert-box">
+                        <i class="fas fa-triangle-exclamation" style="color: var(--danger); font-size: 1.25rem; flex-shrink: 0; margin-top: 0.15rem;"></i>
+                        <div style="font-size: 0.88rem; color: var(--text-primary); line-height: 1.45;">
+                            <strong>Irreversible Action:</strong> Deleting your account will immediately erase all your expenses, support tickets, conversation messages, and generated reports.
+                        </div>
+                    </div>
+                    <form id="form-delete-account-modal" onsubmit="return false;" style="margin-top: 1.15rem;">
+                        <div class="form-group" style="margin-bottom: 1.15rem;">
+                            <label for="modal-delete-password">Current Password *</label>
+                            <input type="password" id="modal-delete-password" class="settings-input" placeholder="Enter your current password" required autocomplete="current-password">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0.5rem;">
+                            <label for="modal-delete-confirm-phrase">Type <strong style="color: var(--danger);">DELETE</strong> to confirm *</label>
+                            <input type="text" id="modal-delete-confirm-phrase" class="settings-input" placeholder="Type DELETE" required autocomplete="off">
+                        </div>
+                    </form>
+                </div>
+                <div class="form-actions" style="padding: 1rem 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
+                    <button type="button" class="btn-secondary" id="btn-modal-cancel-delete">Cancel</button>
+                    <button type="button" class="btn-danger" id="btn-modal-confirm-delete" disabled>
+                        <i class="fas fa-trash-can"></i> Permanently Delete My Account
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
 
         {% if current_user.is_admin_user %}
         <!-- ══════════════════════════════════════════════════════════════════
@@ -2147,7 +2387,7 @@
     <div class="toast-container" id="toast-container"></div>
 
     <!-- App Script -->
-    <script src="/static/js/app.js?v=3.6"></script>
+    <script src="/static/js/app.js?v=3.7"></script>
 </body>
 
 </html>
