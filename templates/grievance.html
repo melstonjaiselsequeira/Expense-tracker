@@ -13,35 +13,73 @@
     <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="/static/css/landing.css">
-    <link rel="stylesheet" href="/static/css/style.css?v=2.3">
     <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100% !important;
+            min-height: 100vh;
+            display: block !important;
+            background-color: var(--bg-canvas, #f8fafc) !important;
+        }
+
         .grievance-wrapper {
             min-height: 100vh;
-            background-color: var(--bg-body, #f8fafc);
+            width: 100% !important;
+            background-color: var(--bg-canvas, #f8fafc);
             display: flex;
             flex-direction: column;
+            align-items: center;
+            box-sizing: border-box;
         }
 
         .grievance-navbar {
+            width: 100% !important;
             background: #ffffff;
             border-bottom: 1px solid var(--border-light, #e2e8f0);
             padding: 1rem 1.5rem;
+            box-sizing: border-box;
         }
 
         .grievance-nav-container {
             max-width: 1080px;
             margin: 0 auto;
+            width: 100%;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-sizing: border-box;
         }
 
         .grievance-main-content {
             max-width: 900px;
-            margin: 2.5rem auto 4rem;
+            margin: 2rem auto 4rem;
             padding: 0 1.5rem;
             width: 100%;
             box-sizing: border-box;
+        }
+
+        .auth-alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 18px;
+            display: none;
+            line-height: 1.5;
+        }
+
+        .auth-alert.error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            display: block;
+        }
+
+        .auth-alert.success {
+            background: #ecfdf5;
+            border: 1px solid #a7f3d0;
+            color: #065f46;
+            display: block;
         }
 
         .grievance-header-card {
@@ -159,7 +197,7 @@
     </style>
 </head>
 
-<body>
+<body class="landing-body">
     <div class="grievance-wrapper">
         <!-- Top Navigation -->
         <header class="grievance-navbar">
@@ -171,11 +209,13 @@
                     <span class="brand-name">Expense<span class="brand-highlight">Flow</span></span>
                 </a>
                 <div style="display: flex; align-items: center; gap: 12px;">
+                    <a href="/" class="btn btn-secondary btn-sm"><i class="fas fa-home"></i> Home</a>
                     <a href="/privacy" class="btn btn-secondary btn-sm"><i class="fas fa-file-shield"></i> Privacy Policy</a>
                     {% if current_user.is_authenticated %}
                     <a href="/dashboard" class="btn btn-primary btn-sm"><i class="fas fa-chart-pie"></i> Open Dashboard</a>
                     {% else %}
                     <a href="/login" class="btn btn-secondary btn-sm">Log In</a>
+                    <a href="/register" class="btn btn-primary btn-sm">Sign Up Free</a>
                     {% endif %}
                 </div>
             </div>
@@ -183,6 +223,13 @@
 
         <!-- Main Content -->
         <main class="grievance-main-content">
+            <!-- Back Navigation -->
+            <div class="legal-back-nav" style="margin-bottom: 1.5rem;">
+                <a href="/" style="display: inline-flex; align-items: center; gap: 8px; color: var(--accent, #635bff); text-decoration: none; font-weight: 600; font-size: 0.95rem;">
+                    <i class="fas fa-arrow-left"></i> Back to ExpenseFlow Home
+                </a>
+            </div>
+
             <!-- Header Title -->
             <div class="grievance-header-card">
                 <span class="grievance-badge">
@@ -436,6 +483,27 @@
             </div>
             {% endif %}
         </main>
+
+        <!-- Centered Footer -->
+        <footer class="landing-footer" style="width: 100%; margin-top: auto; border-top: 1px solid var(--border-light, #e2e8f0); background: #ffffff; padding: 3rem 1.5rem 2rem;">
+            <div style="max-width: 1080px; margin: 0 auto; width: 100%; box-sizing: border-box;">
+                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border-light, #f1f5f9);">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <img src="/static/img/logo.png" alt="ExpenseFlow Logo" style="height: 28px; width: auto;">
+                        <span style="font-weight: 800; font-size: 1.1rem; color: var(--text-primary, #0f172a);">Expense<span style="color: var(--accent, #635bff);">Flow</span></span>
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 1.5rem; font-size: 0.9rem;">
+                        <a href="/" style="color: var(--text-secondary, #475569); text-decoration: none; font-weight: 500;">Home</a>
+                        <a href="/privacy" style="color: var(--text-secondary, #475569); text-decoration: none; font-weight: 500;">Privacy Policy</a>
+                        <a href="/terms" style="color: var(--text-secondary, #475569); text-decoration: none; font-weight: 500;">Terms &amp; Conditions</a>
+                    </div>
+                </div>
+                <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem; padding-top: 1.25rem; font-size: 0.82rem; color: var(--text-muted, #94a3b8);">
+                    <div>&copy; 2026 ExpenseFlow. All rights reserved.</div>
+                    <div>Digital Personal Data Protection (DPDP) Act, 2023 Compliant</div>
+                </div>
+            </div>
+        </footer>
     </div>
 
     <script>
