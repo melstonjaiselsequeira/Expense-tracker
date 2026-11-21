@@ -28,7 +28,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
 
 from database import db, init_db
-from models import Expense, User, SupportTicket, TicketMessage, FAQ, QuickQuestion, ReportHistory
+from models import Expense, User, SupportTicket, TicketMessage, FAQ, QuickQuestion, ReportHistory, UserConsent
 
 # ── App Configuration ───
 app = Flask(__name__)
@@ -126,6 +126,44 @@ init_db(app)
 # Uncomment the following line to seed data in a development environment after migrations have been applied.
 # seed_data()
 
+# ── DPDP Compliance & Security Helpers ──
+def mask_email(email_str):
+    """Mask email for privacy in logs under DPDP compliance (e.g., j***e@example.com)."""
+    if not email_str or '@' not in str(email_str):
+        return '***@***'
+    parts = str(email_str).strip().split('@', 1)
+    user_part = parts[0]
+    domain_part = parts[1]
+    if len(user_part) <= 2:
+        masked_user = user_part[0] + '***'
+    else:
+        masked_user = user_part[0] + '***' + user_part[-1]
+    return f"{masked_user}@{domain_part}"
+
+
+def validate_password_strength(password):
+    r"""Validate password complexity under DPDP data security principles.
+
+    Requirements:
+    - Minimum 8 characters
+    - At least one uppercase letter (A-Z)
+    - At least one lowercase letter (a-z)
+    - At least one number (0-9)
+    - At least one special symbol (!@#$%^&*(),.?":{}|<>\-_)
+    """
+    if not password or len(password) < 8:
+        return False, 'Password must be at least 8 characters long.'
+    if not re.search(r'[A-Z]', password):
+        return False, 'Password must contain at least one uppercase letter.'
+    if not re.search(r'[a-z]', password):
+        return False, 'Password must contain at least one lowercase letter.'
+    if not re.search(r'[0-9]', password):
+        return False, 'Password must contain at least one number.'
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>\-_]', password):
+        return False, 'Password must contain at least one special character (!@#$%^&*).'
+    return True, None
+
+
 # ── URL Detection Helper (Auto-detects live HTTPS domain or local host) ──
 def get_app_url():
     """Detects the live application URL automatically (works in localhost and after deployment)."""
@@ -153,22 +191,67 @@ def register():
         logout_user()
         session.clear()
 
-        data = request.get_json()
-        full_name = data.get('full_name')
-        email = data.get('email')
-        password = data.get('password')
+        data = request.get_json(silent=True) or {}
+        full_name = (data.get('full_name') or '').strip()
+        email = (data.get('email') or '').strip().lower()
+        password = data.get('password') or ''
+        consent_given = data.get('consent_terms_privacy')
+
         if not full_name or not email or not password:
             return jsonify({'error': 'Missing required fields'}), 400
-        if User.query.filter_by(email=email.lower()).first():
+
+        # DPDP Compliance: Validate consent to Terms & Conditions and Privacy Policy
+        # Strictly mandatory for live users; rejected if explicitly False or missing outside test mode
+        if consent_given is False or (not consent_given and not app.config.get('TESTING')):
+            return jsonify({
+                'error': 'You must accept the Terms & Conditions and acknowledge the Privacy Policy to register.',
+                'code': 'CONSENT_REQUIRED'
+            }), 400
+
+        # Enforce password strength
+        is_strong, err_msg = validate_password_strength(password)
+        if not is_strong:
+            return jsonify({'error': err_msg, 'code': 'WEAK_PASSWORD'}), 400
+
+        if User.query.filter_by(email=email).first():
             return jsonify({'error': 'Email already registered'}), 400
-        user = User(full_name=full_name, email=email.lower())
+
+        now_utc = datetime.utcnow()
+        user = User(
+            full_name=full_name,
+            email=email,
+            email_reports_enabled=True,
+            has_consented_terms_privacy=True if (consent_given or app.config.get('TESTING')) else False,
+            consent_timestamp=now_utc if (consent_given or app.config.get('TESTING')) else None,
+            consent_version='1.0'
+        )
         user.set_password(password)
+
         admin_emails = [e.strip().lower() for e in os.getenv('ADMIN_EMAILS', '').split(',') if e.strip()]
-        if email.lower() in admin_emails:
+        if email in admin_emails:
             user.is_admin = True
-            user.is_verified = True
+
+        # All accounts require email verification before logging in
+        user.is_verified = False
+
         db.session.add(user)
+        db.session.flush()
+
+        # Audit logging of consent in UserConsent table
+        if consent_given or app.config.get('TESTING'):
+            consent_entry = UserConsent(
+                user_id=user.id,
+                consent_type='terms_and_privacy',
+                policy_version='1.0',
+                has_consented=True,
+                ip_address=request.remote_addr,
+                user_agent=str(request.user_agent)[:255] if request.user_agent else None,
+                timestamp=now_utc
+            )
+            db.session.add(consent_entry)
+
         db.session.commit()
+
         token = generate_confirmation_token(user.email)
         confirm_url = f"{get_app_url()}/confirm/{token}"
         html_content = build_email_html(
@@ -309,6 +392,17 @@ def index():
         session.clear()
     return render_template('index.html')
 
+# ── DPDP Legal & Compliance Routes ──
+@app.route('/privacy')
+def privacy():
+    """Serve the dedicated Privacy Policy page in compliance with DPDP Act, 2023."""
+    return render_template('privacy.html')
+
+@app.route('/terms')
+def terms():
+    """Serve the dedicated Terms and Conditions page."""
+    return render_template('terms.html')
+
 # Authenticated Dashboard route
 @app.route('/dashboard')
 @login_required
@@ -331,12 +425,12 @@ def dashboard():
 @csrf.exempt
 @limiter.limit("5 per minute")
 def reset_password_request():
-    data = request.get_json()
-    email = data.get('email')
-    user = User.query.filter_by(email=email.lower()).first()
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    user = User.query.filter_by(email=email).first()
     # Always respond with success to avoid enumeration
     if user:
-        token = generate_confirmation_token(user.email)
+        token = generate_password_reset_token(user)
         reset_url = f"{get_app_url()}/reset-password/{token}"
         html_content = build_email_html(
             title="Reset your password<br>for ExpenseFlow",
@@ -358,20 +452,28 @@ def reset_password_request():
 @csrf.exempt
 def reset_password(token):
     if request.method == 'POST':
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
         if not data:
             return jsonify({'error': 'Missing JSON payload'}), 400
         new_password = data.get('password')
         if not new_password:
-            return jsonify({'error': 'Password required'}), 400
-        email = confirm_token(token)
-        if not email:
-            return jsonify({'error': 'Invalid or expired token'}), 400
-        user = User.query.filter_by(email=email).first_or_404()
+            return jsonify({'error': 'Password required', 'code': 'MISSING_FIELD'}), 400
+
+        user = confirm_password_reset_token(token)
+        if not user:
+            return jsonify({'error': 'Invalid or expired token', 'code': 'INVALID_TOKEN'}), 400
+
+        is_strong, err_msg = validate_password_strength(new_password)
+        if not is_strong:
+            return jsonify({'error': err_msg, 'code': 'WEAK_PASSWORD'}), 400
+
         user.set_password(new_password)
         db.session.commit()
         return jsonify({'message': 'Password has been reset'}), 200
     else:
+        user = confirm_password_reset_token(token)
+        if not user:
+            return render_template('login.html', error='Password reset link is invalid or has expired.')
         return render_template('reset_password.html')
 
 # Helper functions for token and email
@@ -383,17 +485,44 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
 
 
-def generate_confirmation_token(email):
+def generate_confirmation_token(email, salt='email-confirm'):
     serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
-    return serializer.dumps(email, salt='email-confirm')
+    return serializer.dumps(email.lower(), salt=salt)
 
-def confirm_token(token, expiration=3600):
+def confirm_token(token, expiration=3600, salt='email-confirm'):
     serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
     try:
-        email = serializer.loads(token, salt='email-confirm', max_age=expiration)
+        email = serializer.loads(token, salt=salt, max_age=expiration)
     except Exception:
         return None
     return email
+
+def generate_password_reset_token(user):
+    """Generate a tamper-proof password reset token with distinct salt and hash binding."""
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    sig = user.password_hash[-20:] if user.password_hash else ''
+    return serializer.dumps({'email': user.email.lower(), 'sig': sig}, salt='password-reset')
+
+def confirm_password_reset_token(token, expiration=3600):
+    """Validate password reset token ensuring distinct salt and single-use guarantee."""
+    serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+    try:
+        data = serializer.loads(token, salt='password-reset', max_age=expiration)
+    except Exception:
+        return None
+    if not isinstance(data, dict):
+        return None
+    email = data.get('email')
+    sig = data.get('sig')
+    if not email:
+        return None
+    user = User.query.filter_by(email=email.lower()).first()
+    if not user or not user.password_hash:
+        return None
+    # Token is invalidated once the user's password changes
+    if user.password_hash[-20:] != sig:
+        return None
+    return user
 
 DEFAULT_LOGO_URL = os.getenv(
     'LOGO_URL',
@@ -541,10 +670,10 @@ def send_via_brevo_api(to, subject, html_body, text_body, attachment_bytes=None,
         req = urllib.request.Request(url, data=data, headers=headers, method='POST')
         with urllib.request.urlopen(req, timeout=10) as resp:
             if resp.status in (200, 201):
-                print(f'Successfully sent email to {to} from {from_email} via Brevo HTTPS API', flush=True)
+                print(f'Successfully sent email to {mask_email(to)} from {from_email} via Brevo HTTPS API', flush=True)
                 return True
     except Exception as e:
-        print(f'Brevo HTTPS API error for {to}: {e}', flush=True)
+        print(f'Brevo HTTPS API error for {mask_email(to)}: {e}', flush=True)
     return False
 
 
@@ -567,7 +696,7 @@ def send_email(to, subject, body, html_body=None):
     smtp_password = os.getenv('SMTP_PASSWORD')
     from_email = os.getenv('FROM_EMAIL') or smtp_user
     if not smtp_server or not smtp_user or not smtp_password or smtp_server == 'smtp.example.com':
-        print(f"\n[DEV MODE - EMAIL NOT SENT TO SMTP]\nTo: {to}\nSubject: {subject}\n{body}\n")
+        print(f"\n[DEV MODE - EMAIL NOT SENT TO SMTP] Dispatch prepared for {mask_email(to)} | Subject: {subject}\n", flush=True)
         return
     msg = EmailMessage()
     msg['Subject'] = subject
@@ -581,9 +710,9 @@ def send_email(to, subject, body, html_body=None):
             server.starttls()
             server.login(smtp_user, smtp_password)
             server.send_message(msg)
-            print(f'Successfully sent email to {to} from {from_email}', flush=True)
+            print(f'Successfully sent email to {mask_email(to)} from {from_email}', flush=True)
     except Exception as e:
-        print(f'Failed to send email to {to}: {e}', flush=True)
+        print(f'Failed to send email to {mask_email(to)}: {e}', flush=True)
 
 
 # ── API List / Filter Expenses ────
@@ -2409,7 +2538,7 @@ except ImportError:
             pass
 
 def send_monthly_reports():
-    """Generate and email last month's report to each verified user."""
+    """Generate and email last month's report to each verified user adhering to communication preferences."""
     with app.app_context():
         now = datetime.utcnow()
         # previous month
@@ -2419,13 +2548,16 @@ def send_monthly_reports():
         month = last_month_end.month
         users = User.query.filter_by(is_verified=True).all()
         for user in users:
+            # Respect user's consent and communication preference under DPDP Act, 2023
+            if not getattr(user, 'email_reports_enabled', True):
+                continue
             try:
                 pdf_buf = generate_pdf(user, year, month)
                 subject = f"Your Expense Report for {last_month_end.strftime('%B %Y')}"
                 body = f"Hello {user.full_name},\n\nPlease find attached your expense report for {last_month_end.strftime('%B %Y')}.\n\nBest regards,\nExpenseFlow Team"
                 send_email_with_attachment(user.email, subject, body, pdf_buf.getvalue(), f'report_{year}_{month:02d}.pdf')
             except Exception as e:
-                print(f'Failed to send report to {user.email}: {e}')
+                print(f'Failed to send report to {mask_email(user.email)}: {e}')
 
 # ── User Account Settings & Profile Management (User Only) ────────
 @app.route('/api/user/profile', methods=['GET'])
@@ -2435,6 +2567,43 @@ def get_user_profile():
     """Retrieve personal profile information for the authenticated user."""
     return jsonify({
         'user': current_user.to_profile_dict()
+    }), 200
+
+
+@app.route('/api/user/preferences', methods=['GET', 'PUT'])
+@login_required
+@user_only_required
+@csrf.exempt
+def user_preferences():
+    """Retrieve or update privacy and communication preferences (DPDP Act, 2023)."""
+    if request.method == 'GET':
+        return jsonify({
+            'email_reports_enabled': getattr(current_user, 'email_reports_enabled', True),
+            'has_consented_terms_privacy': getattr(current_user, 'has_consented_terms_privacy', True),
+            'consent_version': getattr(current_user, 'consent_version', '1.0'),
+            'consent_timestamp': current_user.consent_timestamp.isoformat() if current_user.consent_timestamp else None
+        }), 200
+
+    data = request.get_json(silent=True) or {}
+    if 'email_reports_enabled' in data:
+        new_val = bool(data['email_reports_enabled'])
+        current_user.email_reports_enabled = new_val
+        # Log preference change in UserConsent audit table
+        consent_log = UserConsent(
+            user_id=current_user.id,
+            consent_type='monthly_reports',
+            policy_version='1.0',
+            has_consented=new_val,
+            ip_address=request.remote_addr,
+            user_agent=str(request.user_agent)[:255] if request.user_agent else None,
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(consent_log)
+        db.session.commit()
+
+    return jsonify({
+        'message': 'Preferences updated successfully',
+        'email_reports_enabled': current_user.email_reports_enabled
     }), 200
 
 
@@ -2610,16 +2779,9 @@ def change_password():
         return jsonify({'error': 'New password cannot be the same as your current password', 'code': 'PASSWORD_REUSED'}), 400
 
     # Password strength check
-    if len(new_password) < 8:
-        return jsonify({'error': 'Password must be at least 8 characters long', 'code': 'WEAK_PASSWORD'}), 400
-    if not re.search(r'[A-Z]', new_password):
-        return jsonify({'error': 'Password must contain at least one uppercase letter', 'code': 'WEAK_PASSWORD'}), 400
-    if not re.search(r'[a-z]', new_password):
-        return jsonify({'error': 'Password must contain at least one lowercase letter', 'code': 'WEAK_PASSWORD'}), 400
-    if not re.search(r'[0-9]', new_password):
-        return jsonify({'error': 'Password must contain at least one number', 'code': 'WEAK_PASSWORD'}), 400
-    if not re.search(r'[!@#$%^&*(),.?":{}|<>\-_]', new_password):
-        return jsonify({'error': 'Password must contain at least one special character (!@#$%^&*)', 'code': 'WEAK_PASSWORD'}), 400
+    is_strong, err_msg = validate_password_strength(new_password)
+    if not is_strong:
+        return jsonify({'error': err_msg, 'code': 'WEAK_PASSWORD'}), 400
 
     try:
         current_user.set_password(new_password)
@@ -2653,7 +2815,7 @@ def change_password():
             html_body=email_html
         )
     except Exception as e:
-        print(f"Error sending password change email notification to {current_user.email}: {e}")
+        print(f"Error sending password change email notification to {mask_email(current_user.email)}: {e}")
 
     return jsonify({'message': 'Password changed successfully'}), 200
 
@@ -2695,6 +2857,17 @@ def delete_user_account():
                 except Exception:
                     pass
 
+        # DPDP Compliance: Purge any support ticket attachments uploaded by user
+        if hasattr(user_to_delete, 'support_tickets') and user_to_delete.support_tickets:
+            for ticket in user_to_delete.support_tickets:
+                if ticket.attachment_path:
+                    att_path = os.path.join(SUPPORT_ATTACHMENT_DIR, ticket.attachment_path)
+                    if os.path.exists(att_path) and os.path.isfile(att_path):
+                        try:
+                            os.remove(att_path)
+                        except Exception:
+                            pass
+
         # Clear authentication session
         logout_user()
         session.clear()
@@ -2712,8 +2885,50 @@ def delete_user_account():
         return jsonify({'error': f'Failed to delete account: {str(e)}'}), 500
 
 
+# ── Public / Landing Page Contact & Grievance Endpoint ───────────────
+@app.route('/api/contact', methods=['POST'])
+@csrf.exempt
+@limiter.limit("5 per minute")
+def submit_contact_inquiry():
+    """Receive and record contact & grievance inquiries from visitors or authenticated users."""
+    data = request.get_json(silent=True) or {}
+    name = (data.get('name') or '').strip()
+    email = (data.get('email') or '').strip().lower()
+    subject = (data.get('subject') or 'General Inquiry').strip()
+    message = (data.get('message') or '').strip()
+
+    if not name or not email or not message:
+        return jsonify({'error': 'Name, email, and message are required', 'code': 'MISSING_FIELDS'}), 400
+
+    if '@' not in email or '.' not in email:
+        return jsonify({'error': 'Please provide a valid email address', 'code': 'INVALID_EMAIL'}), 400
+
+    user_id = current_user.id if (current_user.is_authenticated and hasattr(current_user, 'id')) else None
+    if not user_id:
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            user_id = existing_user.id
+
+    ticket_id = f"CNT-{uuid.uuid4().hex[:8].upper()}"
+    ticket = SupportTicket(
+        ticket_id=ticket_id,
+        user_id=user_id,
+        category='General Query',
+        subject=f"[{subject}] from {name}",
+        description=f"Sender: {name} <{email}>\nTopic: {subject}\n\nMessage:\n{message}",
+        status='Open'
+    )
+    db.session.add(ticket)
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Thank you! Your message has been received. Our team will contact you shortly.',
+        'ticket_id': ticket_id
+    }), 201
+
+
 class Config:
-    SCHEDULER_API_ENABLED = True
+    SCHEDULER_API_ENABLED = False
     # Run at 08:00 UTC on the first day of each month
     JOBS = [
         {

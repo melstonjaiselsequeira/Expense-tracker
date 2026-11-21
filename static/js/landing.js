@@ -59,7 +59,7 @@ function initMobileMenu() {
   });
 
   // Close drawer when clicking any link inside
-  drawer.querySelectorAll('a').forEach((link) => {
+  drawer.querySelectorAll('a, button').forEach((link) => {
     link.addEventListener('click', () => {
       toggleDrawer(false);
     });
@@ -89,6 +89,20 @@ function initSmoothScroll() {
     link.addEventListener('click', (e) => {
       const targetId = link.getAttribute('href');
       if (targetId === '#' || !targetId) return;
+
+      // Exclude modal triggers from smooth scroll
+      if (
+        link.id === 'open-contact-nav' ||
+        link.id === 'open-contact-mobile' ||
+        link.id === 'open-contact-modal' ||
+        link.id === 'open-privacy-modal' ||
+        link.id === 'open-terms-modal' ||
+        link.classList.contains('footer-modal-trigger') ||
+        targetId === '#support' ||
+        targetId.includes('modal')
+      ) {
+        return;
+      }
 
       const targetEl = document.querySelector(targetId);
       if (targetEl) {
@@ -204,7 +218,7 @@ function initModals() {
   const modalConfigs = [
     {
       backdropId: 'contact-modal',
-      openTriggers: ['open-contact-modal'],
+      openTriggers: ['open-contact-modal', 'open-contact-nav', 'open-contact-mobile', 'nav-support-btn'],
       closeTriggers: ['close-contact-modal']
     },
     {
@@ -221,43 +235,66 @@ function initModals() {
 
   modalConfigs.forEach(({ backdropId, openTriggers, closeTriggers }) => {
     const backdrop = document.getElementById(backdropId);
-    if (!backdrop) return;
 
-    const openModal = () => {
-      backdrop.classList.add('open');
-      backdrop.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
+    const openModal = (e) => {
+      if (e) e.preventDefault();
+      if (backdrop) {
+        backdrop.classList.add('open');
+        backdrop.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+      }
     };
 
-    const closeModal = () => {
-      backdrop.classList.remove('open');
-      backdrop.setAttribute('aria-hidden', 'true');
-      document.body.style.overflow = '';
+    const closeModal = (e) => {
+      if (e) e.preventDefault();
+      if (backdrop) {
+        backdrop.classList.remove('open');
+        backdrop.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+      }
     };
 
     openTriggers.forEach((triggerId) => {
-      const btn = document.getElementById(triggerId);
-      if (btn) btn.addEventListener('click', openModal);
+      const elements = document.querySelectorAll('#' + triggerId + ', .' + triggerId);
+      elements.forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          if (e) e.preventDefault();
+          if (backdrop) {
+            openModal(e);
+          } else {
+            // Safe fallback navigation if modal backdrop is not present
+            if (triggerId.includes('privacy')) {
+              window.location.href = '/privacy';
+            } else if (triggerId.includes('terms')) {
+              window.location.href = '/terms';
+            }
+          }
+        });
+      });
     });
 
-    closeTriggers.forEach((triggerId) => {
-      const btn = document.getElementById(triggerId);
-      if (btn) btn.addEventListener('click', closeModal);
-    });
+    if (backdrop) {
+      closeTriggers.forEach((triggerId) => {
+        const elements = document.querySelectorAll('#' + triggerId + ', .' + triggerId);
+        elements.forEach((btn) => {
+          btn.addEventListener('click', closeModal);
+        });
+      });
 
-    // Close on backdrop click (outside modal dialog)
-    backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) {
-        closeModal();
-      }
-    });
+      // Close on backdrop click (outside modal dialog)
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) {
+          closeModal(e);
+        }
+      });
 
-    // Close on ESC
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && backdrop.classList.contains('open')) {
-        closeModal();
-      }
-    });
+      // Close on ESC
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && backdrop.classList.contains('open')) {
+          closeModal(e);
+        }
+      });
+    }
   });
 }
 
@@ -269,11 +306,13 @@ function initContactForm() {
 
   if (!form || !alertBox || !submitBtn) return;
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const name = document.getElementById('contact-name').value.trim();
     const email = document.getElementById('contact-email').value.trim();
+    const subjectEl = document.getElementById('contact-subject');
+    const subject = subjectEl ? subjectEl.value : 'General Question';
     const message = document.getElementById('contact-message').value.trim();
 
     if (!name || !email || !message) {
@@ -288,23 +327,42 @@ function initContactForm() {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending message...';
 
-    setTimeout(() => {
-      form.reset();
+    try {
+      const resp = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, subject, message })
+      });
+      const data = await resp.json();
+
       submitBtn.disabled = false;
       submitBtn.innerHTML = originalText;
 
-      alertBox.className = 'modal-alert-box success';
-      alertBox.innerHTML = '<i class="fas fa-check-circle"></i> Thank you! Your message has been received. Our team will get back to you shortly.';
-      alertBox.style.display = 'block';
+      if (resp.ok) {
+        form.reset();
+        alertBox.className = 'modal-alert-box success';
+        alertBox.innerHTML = `<i class="fas fa-check-circle"></i> ${data.message || 'Thank you! Your message has been received. Our team will get back to you shortly.'}`;
+        alertBox.style.display = 'block';
 
-      setTimeout(() => {
-        alertBox.style.display = 'none';
-        const contactModal = document.getElementById('contact-modal');
-        if (contactModal) {
-          contactModal.classList.remove('open');
-          document.body.style.overflow = '';
-        }
-      }, 2500);
-    }, 700);
+        setTimeout(() => {
+          alertBox.style.display = 'none';
+          const contactModal = document.getElementById('contact-modal');
+          if (contactModal) {
+            contactModal.classList.remove('open');
+            document.body.style.overflow = '';
+          }
+        }, 2500);
+      } else {
+        alertBox.className = 'modal-alert-box error';
+        alertBox.textContent = data.error || 'Failed to submit message. Please try again.';
+        alertBox.style.display = 'block';
+      }
+    } catch (err) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+      alertBox.className = 'modal-alert-box error';
+      alertBox.textContent = 'Network error. Please try again later.';
+      alertBox.style.display = 'block';
+    }
   });
 }

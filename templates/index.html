@@ -73,6 +73,7 @@
                     <li><a href="#how-it-works" class="nav-item">How It Works</a></li>
                     <li><a href="#dashboard-preview" class="nav-item">Preview</a></li>
                     <li><a href="#about" class="nav-item">About</a></li>
+                    <li><a href="#support" class="nav-item" id="open-contact-nav" role="button">Support</a></li>
                 </ul>
             </nav>
             {% endif %}
@@ -115,6 +116,7 @@
                     <li><a href="#how-it-works" class="mobile-nav-link"><i class="fas fa-layer-group"></i> How It Works</a></li>
                     <li><a href="#dashboard-preview" class="mobile-nav-link"><i class="fas fa-desktop"></i> Dashboard Preview</a></li>
                     <li><a href="#about" class="mobile-nav-link"><i class="fas fa-info-circle"></i> About ExpenseFlow</a></li>
+                    <li><a href="#support" class="mobile-nav-link" id="open-contact-mobile" role="button"><i class="fas fa-headset"></i> Support</a></li>
                 </ul>
                 {% endif %}
                 <div class="mobile-auth-section">
@@ -1175,13 +1177,15 @@
                     </ul>
                 </div>
 
-                <!-- Column 4: Legal & Contact -->
+                <!-- Column 4: Legal & Support -->
                 <div class="footer-nav-col">
                     <h4 class="footer-col-title">Legal & Support</h4>
                     <ul class="footer-link-list">
                         <li><button class="footer-modal-trigger" id="open-contact-modal">Contact & Support</button></li>
                         <li><button class="footer-modal-trigger" id="open-privacy-modal">Privacy Policy</button></li>
+                        <li><a href="/privacy">Privacy Notice (DPDP)</a></li>
                         <li><button class="footer-modal-trigger" id="open-terms-modal">Terms and Conditions</button></li>
+                        <li><a href="/terms">Terms of Service</a></li>
                     </ul>
                 </div>
             </div>
@@ -1267,7 +1271,8 @@
                 <h4>4. Data Ownership & Deletion</h4>
                 <p>You maintain full ownership of all data entered into ExpenseFlow. You may edit, update, delete individual transaction records, or export your complete financial ledger at any time via CSV or PDF.</p>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                <a href="/privacy" class="btn btn-primary btn-sm" target="_blank"><i class="fas fa-external-link-alt"></i> Full Policy Document</a>
                 <button class="btn btn-secondary btn-sm" id="close-privacy-btn">Close</button>
             </div>
         </div>
@@ -1296,7 +1301,8 @@
                 <h4>4. Responsible Use</h4>
                 <p>You agree not to misuse the platform, attempt unauthorized API access, reverse-engineer proprietary components, or disrupt services for other users.</p>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+                <a href="/terms" class="btn btn-primary btn-sm" target="_blank"><i class="fas fa-external-link-alt"></i> Full Terms Document</a>
                 <button class="btn btn-secondary btn-sm" id="close-terms-btn">Close</button>
             </div>
         </div>

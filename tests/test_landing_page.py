@@ -26,6 +26,9 @@ def test_landing_page_required_sections_and_copy(client):
     assert 'href="#how-it-works"' in html
     assert 'href="#dashboard-preview"' in html
     assert 'href="#about"' in html
+    assert 'id="open-contact-nav"' in html
+    assert 'id="open-contact-mobile"' in html
+    assert 'Support' in html
 
     # Unauthenticated state navigation actions
     assert 'href="/login"' in html
@@ -127,3 +130,19 @@ def test_landing_page_authenticated_user_navigation(client):
     # Authenticated user should see dashboard and logout in nav
     assert 'href="/dashboard"' in html
     assert 'href="/logout"' in html
+
+
+def test_legal_pages_contain_modals_and_support_triggers(client):
+    """Verify /privacy and /terms contain interactive modals and Support button triggers."""
+    for url in ['/privacy', '/terms']:
+        resp = client.get(url)
+        assert resp.status_code == 200
+        content = resp.data.decode('utf-8')
+        assert 'id="contact-modal"' in content
+        assert 'id="privacy-modal"' in content
+        assert 'id="terms-modal"' in content
+        assert 'id="open-privacy-modal"' in content
+        assert 'id="open-terms-modal"' in content
+        assert 'id="open-contact-modal"' in content
+        assert 'id="open-contact-nav"' in content
+

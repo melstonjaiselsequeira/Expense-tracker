@@ -4451,6 +4451,42 @@ function initUserSettingsListeners() {
     });
   }
 
+  // DPDP Privacy: Monthly Reports Email Toggle
+  const prefReportsToggle = $('#pref-monthly-reports');
+  const prefFeedback = $('#pref-monthly-reports-feedback');
+  if (prefReportsToggle) {
+    prefReportsToggle.addEventListener('change', async (e) => {
+      const enabled = e.target.checked;
+      try {
+        const resp = await fetch('/api/user/preferences', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email_reports_enabled: enabled })
+        });
+        if (resp.ok) {
+          if (prefFeedback) {
+            prefFeedback.style.display = 'block';
+            prefFeedback.style.color = '#10b981';
+            prefFeedback.textContent = enabled ? 'Monthly report emails enabled.' : 'Monthly report emails disabled.';
+            setTimeout(() => { prefFeedback.style.display = 'none'; }, 3000);
+          }
+        } else {
+          if (prefFeedback) {
+            prefFeedback.style.display = 'block';
+            prefFeedback.style.color = '#ef4444';
+            prefFeedback.textContent = 'Failed to update preferences.';
+          }
+        }
+      } catch (err) {
+        if (prefFeedback) {
+          prefFeedback.style.display = 'block';
+          prefFeedback.style.color = '#ef4444';
+          prefFeedback.textContent = 'Network error updating preferences.';
+        }
+      }
+    });
+  }
+
   // Delete Account Modal
   const btnOpenDelete = $('#btn-open-delete-account');
   if (btnOpenDelete) {

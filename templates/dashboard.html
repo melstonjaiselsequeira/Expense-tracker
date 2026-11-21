@@ -1130,7 +1130,51 @@
                     </div>
                 </div>
 
-                <!-- ── Card 3: Account Management (Danger Zone) ── -->
+                <!-- ── Card 3: Privacy & Compliance Preferences (DPDP Act, 2023) ── -->
+                <div class="chart-card settings-card" id="settings-card-privacy">
+                    <div class="chart-header">
+                        <h3><i class="fas fa-user-shield" style="color: var(--accent); margin-right: 0.5rem;"></i> Privacy &amp; Data Rights</h3>
+                        <span class="settings-verified-badge"><i class="fas fa-shield-check"></i> DPDP Compliant</span>
+                    </div>
+                    <div class="settings-card-body">
+                        <p class="settings-section-desc">Manage your data consent preferences and exercise your statutory rights under the Digital Personal Data Protection Act, 2023.</p>
+
+                        <div class="settings-preference-group" style="padding: 1rem; background-color: var(--bg-surface-subtle, rgba(0,0,0,0.02)); border: 1px solid var(--border-light, #e2e8f0); border-radius: 8px; margin-bottom: 1.25rem;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary); margin-bottom: 0.25rem;">
+                                        Monthly Report Emails
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary); line-height: 1.4;">
+                                        Receive an automated PDF financial summary of your spending at the beginning of each month.
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="switch-toggle" style="position: relative; display: inline-block; width: 44px; height: 24px; cursor: pointer;">
+                                        <input type="checkbox" id="pref-monthly-reports" style="cursor: pointer; width: 20px; height: 20px; accent-color: var(--accent, #635bff);" {% if current_user.email_reports_enabled %}checked{% endif %}>
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="pref-monthly-reports-feedback" style="margin-top: 0.5rem; font-size: 0.82rem; display: none;"></div>
+                        </div>
+
+                        <div class="legal-links-block" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border-light, #e2e8f0); font-size: 0.88rem;">
+                            <a href="/privacy" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-shield-alt"></i> View Privacy Policy
+                            </a>
+                            <span style="color: var(--text-light);">&bull;</span>
+                            <a href="/terms" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-file-contract"></i> View Terms &amp; Conditions
+                            </a>
+                            <span style="color: var(--text-light);">&bull;</span>
+                            <a href="mailto:grievance@expenseflow.com" style="color: var(--accent); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                                <i class="fas fa-headset"></i> Contact Grievance Officer
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Card 4: Account Management (Danger Zone) ── -->
                 <div class="chart-card settings-card settings-danger-card" id="settings-card-danger">
                     <div class="chart-header danger-header">
                         <h3><i class="fas fa-triangle-exclamation" style="color: var(--danger); margin-right: 0.5rem;"></i> Account Management</h3>

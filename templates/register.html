@@ -59,6 +59,16 @@
                         <div class="strength-text" id="strength-text">Password strength: Weak</div>
                     </div>
                 </div>
+
+                <div class="form-group checkbox-consent-group" style="margin-top: 14px; margin-bottom: 20px;">
+                    <label class="consent-checkbox-label" for="consent_terms_privacy" style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; font-size: 0.88rem; line-height: 1.5; color: var(--text-secondary);">
+                        <input type="checkbox" id="consent_terms_privacy" name="consent_terms_privacy" required style="margin-top: 3px; cursor: pointer; width: 16px; height: 16px; accent-color: var(--accent, #635bff);">
+                        <span>
+                            I agree to the <a href="/terms" target="_blank" rel="noopener" style="color: var(--accent, #635bff); font-weight: 600; text-decoration: underline;">Terms &amp; Conditions</a> and acknowledge the <a href="/privacy" target="_blank" rel="noopener" style="color: var(--accent, #635bff); font-weight: 600; text-decoration: underline;">Privacy Policy</a>.
+                        </span>
+                    </label>
+                </div>
+
                 <button type="submit" class="auth-btn">
                     <i class="fas fa-user-plus"></i> Sign Up
                 </button>
@@ -66,6 +76,9 @@
 
             <div class="auth-footer">
                 <div>Already have an account? <a href="/login">Log in</a></div>
+                <div style="margin-top: 10px; font-size: 0.82rem; color: var(--text-muted);">
+                    <a href="/terms" target="_blank">Terms</a> &bull; <a href="/privacy" target="_blank">Privacy Policy</a>
+                </div>
             </div>
         </div>
     </div>
@@ -138,6 +151,13 @@
             const submitBtn = e.target.querySelector('button[type="submit"]');
             if (submitBtn && submitBtn.disabled) return;
             alertBox.style.display = 'none';
+
+            const consentBox = document.getElementById('consent_terms_privacy');
+            if (consentBox && !consentBox.checked) {
+                showAlert('You must accept the Terms & Conditions and acknowledge the Privacy Policy to register.', 'error');
+                return;
+            }
+
             if (submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.style.opacity = '0.6';
@@ -145,7 +165,8 @@
             const data = {
                 full_name: e.target.full_name.value.trim(),
                 email: e.target.email.value.trim(),
-                password: e.target.password.value
+                password: e.target.password.value,
+                consent_terms_privacy: consentBox ? consentBox.checked : false
             };
             try {
                 const resp = await fetch('/register', {

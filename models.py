@@ -28,10 +28,15 @@ class User(db.Model):
     monthly_budget = db.Column(db.Float, default=1000.0, nullable=True)
     username = db.Column(db.String(80), unique=True, nullable=True, index=True)
     profile_picture = db.Column(db.String(255), nullable=True)
+    email_reports_enabled = db.Column(db.Boolean, default=True, nullable=False)
+    has_consented_terms_privacy = db.Column(db.Boolean, default=False, nullable=False)
+    consent_timestamp = db.Column(db.DateTime, nullable=True)
+    consent_version = db.Column(db.String(32), nullable=True)
 
     # Relationship to expenses and support tickets
     expenses = db.relationship("Expense", backref="user", lazy=True, cascade="all, delete-orphan")
     support_tickets = db.relationship("SupportTicket", backref="user", lazy=True, cascade="all, delete-orphan")
+    consents = db.relationship("UserConsent", backref="user", lazy="dynamic", cascade="all, delete-orphan")
 
     def set_password(self, password):
         """Hash and store the password using Werkzeug's generate_password_hash (pbkdf2:sha256)."""
@@ -75,7 +80,11 @@ class User(db.Model):
             'profile_picture': self.profile_picture,
             'avatar_url': self.avatar_url,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'is_admin': self.is_admin_user
+            'is_admin': self.is_admin_user,
+            'email_reports_enabled': getattr(self, 'email_reports_enabled', True),
+            'has_consented_terms_privacy': getattr(self, 'has_consented_terms_privacy', False),
+            'consent_version': getattr(self, 'consent_version', None),
+            'consent_timestamp': self.consent_timestamp.isoformat() if getattr(self, 'consent_timestamp', None) else None
         }
 
     def get_id(self):
@@ -121,7 +130,7 @@ class SupportTicket(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     ticket_id = db.Column(db.String(30), unique=True, nullable=False, index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True, index=True)
     category = db.Column(db.String(50), nullable=False)   # 'General Query', 'Report a Problem', 'Feature Request'
     subject = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text, nullable=False)
@@ -151,9 +160,13 @@ class SupportTicket(db.Model):
             'updated_at': self.updated_at.isoformat(),
             'message_count': len(self.messages) if self.messages else 0,
         }
-        if include_user and self.user:
-            data['user_name'] = self.user.full_name
-            data['user_email'] = self.user.email
+        if include_user:
+            if self.user:
+                data['user_name'] = self.user.full_name
+                data['user_email'] = self.user.email
+            else:
+                data['user_name'] = 'Guest Contact'
+                data['user_email'] = 'Visitor / Public Inquiry'
         return data
 
     def __repr__(self):
@@ -282,6 +295,38 @@ class ReportHistory(db.Model):
 
     def __repr__(self):
         return f'<ReportHistory {self.id}: {self.report_name} ({self.format}) user={self.user_id}>'
+
+
+class UserConsent(db.Model):
+    """Audit log of user consents under DPDP Act, 2023.
+
+    Records consent grants and revocations, policy versions, timestamps, and network context.
+    """
+    __tablename__ = 'user_consents'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True, index=True)
+    consent_type = db.Column(db.String(64), nullable=False, index=True)  # 'terms_and_privacy', 'monthly_reports'
+    policy_version = db.Column(db.String(32), nullable=False, default='1.0')
+    has_consented = db.Column(db.Boolean, default=True, nullable=False)
+    ip_address = db.Column(db.String(64), nullable=True)
+    user_agent = db.Column(db.String(256), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, nullable=False, index=True)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'consent_type': self.consent_type,
+            'policy_version': self.policy_version,
+            'has_consented': self.has_consented,
+            'ip_address': self.ip_address,
+            'timestamp': self.timestamp.isoformat() if self.timestamp else None
+        }
+
+    def __repr__(self):
+        return f'<UserConsent user={self.user_id} type={self.consent_type} consented={self.has_consented}>'
+
 
 
 

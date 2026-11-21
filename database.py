@@ -161,6 +161,18 @@ def init_db(app):
                 if 'profile_picture' not in cols:
                     db.session.execute(text("ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255)"))
                     db.session.commit()
+                if 'email_reports_enabled' not in cols:
+                    db.session.execute(text("ALTER TABLE users ADD COLUMN email_reports_enabled BOOLEAN DEFAULT TRUE"))
+                    db.session.commit()
+                if 'has_consented_terms_privacy' not in cols:
+                    db.session.execute(text("ALTER TABLE users ADD COLUMN has_consented_terms_privacy BOOLEAN DEFAULT FALSE"))
+                    db.session.commit()
+                if 'consent_timestamp' not in cols:
+                    db.session.execute(text("ALTER TABLE users ADD COLUMN consent_timestamp TIMESTAMP"))
+                    db.session.commit()
+                if 'consent_version' not in cols:
+                    db.session.execute(text("ALTER TABLE users ADD COLUMN consent_version VARCHAR(32)"))
+                    db.session.commit()
             if 'expenses' in insp.get_table_names():
                 cols = [c['name'] for c in insp.get_columns('expenses')]
                 if 'status' not in cols:

@@ -11,10 +11,10 @@ if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 import pytest
-from app import app, db
+from app import app, db, limiter
 
-# Ignore the scratch directory during test collection to avoid name collisions
-collect_ignore = ["scratch"]
+# Ignore scratch and standalone diagnostic scripts during test collection
+collect_ignore = ["scratch", "test_smtp.py"]
 
 from models import User, Expense
 
@@ -31,6 +31,10 @@ def client():
     with app.app_context():
         db.drop_all()
         db.create_all()
+        try:
+            limiter.reset()
+        except Exception:
+            pass
     with app.test_client() as client:
         yield client
     # Cleanup
