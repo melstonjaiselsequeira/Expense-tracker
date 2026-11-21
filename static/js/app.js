@@ -190,6 +190,8 @@ function switchView(viewName) {
     loadAdminFAQs();
   } else if (viewName === 'admin-user-history') {
     loadAdminUserHistorySection();
+  } else if (viewName === 'admin-grievances') {
+    loadAdminGrievances();
   }
 
   // Sync active states on top admin tabs if on an admin view
@@ -1823,6 +1825,8 @@ async function updateAdminBadges() {
     $$('.admin-pill-queries, #sidebar-badge-queries').forEach(el => el.textContent = queriesTotal);
     $$('.admin-pill-problems, #sidebar-badge-problems').forEach(el => el.textContent = problemsTotal);
     $$('.admin-pill-features, #sidebar-badge-features').forEach(el => el.textContent = featuresTotal);
+    const grievancesTotal = stats.grievances_total || 0;
+    $$('.admin-pill-grievances, #sidebar-badge-grievances').forEach(el => el.textContent = grievancesTotal);
 
     // Category Distribution Bars
     const catQueryCountEl = $('#dash-cat-query-count');
@@ -2639,6 +2643,283 @@ function initAdminSuiteListeners() {
       }
     }, 250));
   }
+
+  // Initialize Privacy Grievances listeners
+  initAdminGrievanceListeners();
+}
+
+// ── Privacy Grievances & Data Protection (DPDP Act, 2023) Admin Logic ──
+let adminGrievancesCache = [];
+
+function getGrievanceStatusBadgeHtml(status) {
+  const s = (status || '').toLowerCase().replace(/\s+/g, '-');
+  const icons = {
+    'submitted': 'fa-paper-plane',
+    'under-review': 'fa-magnifying-glass',
+    'responded': 'fa-reply',
+    'resolved': 'fa-circle-check'
+  };
+  const icon = icons[s] || 'fa-circle-info';
+  return `<span class="status-badge-pill status-${s}"><i class="fas ${icon}" style="margin-right: 4px;"></i>${escapeHtml(status || 'Submitted')}</span>`;
+}
+
+async function loadAdminGrievances() {
+  const tbody = $('#admin-grv-tbody');
+  const emptyState = $('#admin-grv-empty');
+  const table = $('#admin-grv-table');
+  const countEl = $('#admin-grv-count');
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 2.5rem; color: var(--text-muted);"><i class="fas fa-spinner fa-spin" style="font-size: 1.5rem; margin-bottom: 0.5rem; display: block;"></i>Loading privacy grievances...</td></tr>`;
+  if (emptyState) emptyState.style.display = 'none';
+  if (table) table.style.display = 'table';
+
+  const statusFilter = $('#admin-grv-filter-status') ? $('#admin-grv-filter-status').value : 'All';
+  const catFilter = $('#admin-grv-filter-category') ? $('#admin-grv-filter-category').value : 'All';
+  const searchInput = $('#admin-grv-search');
+  const searchQuery = searchInput ? searchInput.value.trim() : '';
+
+  const params = new URLSearchParams();
+  if (statusFilter && statusFilter !== 'All') params.append('status', statusFilter);
+  if (catFilter && catFilter !== 'All') params.append('category', catFilter);
+  if (searchQuery) params.append('search', searchQuery);
+
+  try {
+    const res = await fetch(`/api/admin/grievances?${params.toString()}`);
+    if (!res.ok) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 2rem; color: var(--danger);">Failed to load privacy grievances.</td></tr>`;
+      return;
+    }
+    const data = await res.json();
+    adminGrievancesCache = data.grievances || [];
+
+    if (countEl) countEl.textContent = adminGrievancesCache.length;
+
+    if (adminGrievancesCache.length === 0) {
+      if (table) table.style.display = 'none';
+      if (emptyState) emptyState.style.display = 'block';
+      return;
+    }
+
+    if (table) table.style.display = 'table';
+    if (emptyState) emptyState.style.display = 'none';
+
+    tbody.innerHTML = adminGrievancesCache.map(g => `
+      <tr>
+        <td style="font-family: monospace; font-weight: 700; color: var(--accent);">
+          <i class="fas fa-shield-halved" style="margin-right: 4px; font-size: 0.8rem;"></i>${escapeHtml(g.reference_id)}
+        </td>
+        <td>
+          <div style="font-weight: 600; color: var(--text-primary); font-size: 0.88rem;">${escapeHtml(g.user_name || 'Complainant')}</div>
+          <div style="font-size: 0.76rem; color: var(--text-muted);">${escapeHtml(g.contact_email)}</div>
+        </td>
+        <td>
+          <span style="font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); background: var(--bg-secondary, #f1f5f9); padding: 3px 8px; border-radius: 6px;">
+            ${escapeHtml(g.category)}
+          </span>
+        </td>
+        <td style="font-weight: 600; color: var(--text-primary); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+          ${escapeHtml(g.subject)}
+        </td>
+        <td style="color: var(--text-secondary); font-size: 0.85rem;">
+          ${formatDateTime(g.created_at)}
+        </td>
+        <td>
+          ${getGrievanceStatusBadgeHtml(g.status)}
+        </td>
+        <td style="text-align: right;">
+          <button type="button" class="btn-sm btn-secondary" onclick="openAdminGrievanceModal(${g.id})" title="Review Grievance">
+            <i class="fas fa-magnifying-glass"></i> Review
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error('Error loading admin grievances:', err);
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 2rem; color: var(--danger);">Network error loading grievances.</td></tr>`;
+  }
+}
+
+async function openAdminGrievanceModal(grievanceId) {
+  const g = adminGrievancesCache.find(x => x.id === grievanceId);
+  if (!g) {
+    try {
+      const res = await fetch(`/api/admin/grievances/${grievanceId}`);
+      if (res.ok) {
+        const data = await res.json();
+        populateGrievanceModal(data.grievance);
+      }
+    } catch (e) {
+      showToast('Could not load grievance details', 'error');
+    }
+    return;
+  }
+  populateGrievanceModal(g);
+}
+
+function populateGrievanceModal(g) {
+  const idEl = $('#admin-grv-modal-id');
+  if (idEl) idEl.value = g.id;
+  const refEl = $('#grv-modal-ref');
+  if (refEl) refEl.textContent = g.reference_id;
+  const emailEl = $('#grv-modal-email');
+  if (emailEl) emailEl.textContent = `${g.contact_email} (${g.user_name || 'Complainant'})`;
+  const dateEl = $('#grv-modal-date');
+  if (dateEl) dateEl.textContent = formatDateTime(g.created_at);
+  const catEl = $('#grv-modal-cat');
+  if (catEl) catEl.textContent = g.category;
+  const subjEl = $('#grv-modal-subject');
+  if (subjEl) subjEl.textContent = g.subject;
+  const descEl = $('#grv-modal-desc');
+  if (descEl) descEl.textContent = g.description;
+
+  const attWrap = $('#grv-modal-attachment-wrap');
+  const attLink = $('#grv-modal-attachment-link');
+  if (g.has_attachment && g.attachment_filename) {
+    if (attLink) attLink.href = `/api/grievance/attachment/${encodeURIComponent(g.attachment_filename)}`;
+    if (attWrap) attWrap.style.display = 'block';
+  } else {
+    if (attWrap) attWrap.style.display = 'none';
+  }
+
+  const statusSelect = $('#grv-modal-status');
+  if (statusSelect) statusSelect.value = g.status || 'Submitted';
+
+  const notesText = $('#grv-modal-notes');
+  if (notesText) notesText.value = g.admin_notes || '';
+
+  const respText = $('#grv-modal-response');
+  if (respText) respText.value = g.admin_response || '';
+
+  const modal = $('#admin-grv-modal-overlay');
+  if (modal) modal.classList.add('active');
+}
+
+function closeAdminGrievanceModal() {
+  const modal = $('#admin-grv-modal-overlay');
+  if (modal) modal.classList.remove('active');
+}
+
+function initAdminGrievanceListeners() {
+  const modalClose = $('#admin-grv-modal-close');
+  if (modalClose) modalClose.addEventListener('click', closeAdminGrievanceModal);
+
+  const overlay = $('#admin-grv-modal-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) closeAdminGrievanceModal();
+    });
+  }
+
+  // Refresh button
+  const refreshBtn = $('#btn-admin-grv-refresh');
+  if (refreshBtn) refreshBtn.addEventListener('click', loadAdminGrievances);
+
+  // Status and Category filters
+  const statusFilter = $('#admin-grv-filter-status');
+  if (statusFilter) statusFilter.addEventListener('change', loadAdminGrievances);
+
+  const catFilter = $('#admin-grv-filter-category');
+  if (catFilter) catFilter.addEventListener('change', loadAdminGrievances);
+
+  // Search input
+  const searchInput = $('#admin-grv-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', debounce(() => {
+      loadAdminGrievances();
+    }, 250));
+  }
+
+  // Save Status / Notes Only
+  const saveBtn = $('#btn-admin-grv-save-status');
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const gId = $('#admin-grv-modal-id').value;
+      if (!gId) return;
+
+      const newStatus = $('#grv-modal-status').value;
+      const notes = $('#grv-modal-notes').value.trim();
+
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+      try {
+        const res = await fetch(`/api/admin/grievances/${gId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus, admin_notes: notes })
+        });
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-floppy-disk"></i> Save Status / Notes Only';
+
+        if (res.ok) {
+          showToast('Grievance status and notes saved successfully', 'success');
+          closeAdminGrievanceModal();
+          loadAdminGrievances();
+          updateAdminBadges();
+        } else {
+          const d = await res.json();
+          showToast(d.error || 'Failed to update grievance', 'error');
+        }
+      } catch (err) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="fas fa-floppy-disk"></i> Save Status / Notes Only';
+        showToast('Network error updating grievance', 'error');
+      }
+    });
+  }
+
+  // Send Official Response & Notify
+  const sendRespBtn = $('#btn-admin-grv-send-response');
+  if (sendRespBtn) {
+    sendRespBtn.addEventListener('click', async () => {
+      const gId = $('#admin-grv-modal-id').value;
+      if (!gId) return;
+
+      const responseText = ($('#grv-modal-response').value || '').trim();
+      if (!responseText) {
+        showToast('Please enter an official response before sending.', 'error');
+        return;
+      }
+
+      let newStatus = $('#grv-modal-status').value;
+      if (newStatus === 'Submitted' || newStatus === 'Under Review') {
+        newStatus = 'Responded';
+      }
+      const notes = $('#grv-modal-notes').value.trim();
+
+      sendRespBtn.disabled = true;
+      sendRespBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Dispatching Response...';
+
+      try {
+        const res = await fetch(`/api/admin/grievances/${gId}/respond`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            response: responseText,
+            status: newStatus,
+            admin_notes: notes
+          })
+        });
+        sendRespBtn.disabled = false;
+        sendRespBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Official Response & Notify';
+
+        if (res.ok) {
+          showToast('Official response recorded and dispatched to complainant email', 'success');
+          closeAdminGrievanceModal();
+          loadAdminGrievances();
+          updateAdminBadges();
+        } else {
+          const d = await res.json();
+          showToast(d.error || 'Failed to send grievance response', 'error');
+        }
+      } catch (err) {
+        sendRespBtn.disabled = false;
+        sendRespBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send Official Response & Notify';
+        showToast('Network error dispatching response', 'error');
+      }
+    });
+  }
 }
 
 // Window exports for HTML inline handlers
@@ -2653,6 +2934,9 @@ window.loadAdminConversations = loadAdminConversations;
 window.loadAdminUserHistorySection = loadAdminUserHistorySection;
 window.selectAdminUserHistory = selectAdminUserHistory;
 window.updateAdminBadges = updateAdminBadges;
+window.loadAdminGrievances = loadAdminGrievances;
+window.openAdminGrievanceModal = openAdminGrievanceModal;
+window.closeAdminGrievanceModal = closeAdminGrievanceModal;
 
 // ── Legacy loadAdminSupportTickets alias for compatibility ──
 async function loadAdminSupportTickets() {

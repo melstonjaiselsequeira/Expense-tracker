@@ -37,6 +37,7 @@ class User(db.Model):
     expenses = db.relationship("Expense", backref="user", lazy=True, cascade="all, delete-orphan")
     support_tickets = db.relationship("SupportTicket", backref="user", lazy=True, cascade="all, delete-orphan")
     consents = db.relationship("UserConsent", backref="user", lazy="dynamic", cascade="all, delete-orphan")
+    grievances = db.relationship("Grievance", backref="user", lazy=True, cascade="all, delete-orphan")
 
     def set_password(self, password):
         """Hash and store the password using Werkzeug's generate_password_hash (pbkdf2:sha256)."""
@@ -326,6 +327,57 @@ class UserConsent(db.Model):
 
     def __repr__(self):
         return f'<UserConsent user={self.user_id} type={self.consent_type} consented={self.has_consented}>'
+
+
+class Grievance(db.Model):
+    """Model representing an internal privacy grievance under India's DPDP Act, 2023.
+
+    Keeps privacy grievances strictly segregated from normal technical support tickets.
+    Statuses: 'Submitted', 'Under Review', 'Responded', 'Resolved'.
+    """
+    __tablename__ = 'grievances'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    reference_id = db.Column(db.String(32), unique=True, nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=True, index=True)
+    contact_email = db.Column(db.String(120), nullable=False, index=True)
+    category = db.Column(db.String(100), nullable=False)
+    subject = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    attachment_path = db.Column(db.String(255), nullable=True)
+    status = db.Column(db.String(30), default='Submitted', nullable=False)  # 'Submitted', 'Under Review', 'Responded', 'Resolved'
+    admin_response = db.Column(db.Text, nullable=True)
+    admin_notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    def to_dict(self, include_admin_details=False):
+        data = {
+            'id': self.id,
+            'reference_id': self.reference_id,
+            'contact_email': self.contact_email,
+            'category': self.category,
+            'subject': self.subject,
+            'description': self.description,
+            'has_attachment': bool(self.attachment_path),
+            'attachment_filename': self.attachment_path,
+            'status': self.status,
+            'admin_response': self.admin_response or '',
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat() if self.updated_at else self.created_at.isoformat(),
+        }
+        if include_admin_details:
+            data['admin_notes'] = self.admin_notes or ''
+            data['user_id'] = self.user_id
+            if self.user:
+                data['user_name'] = self.user.full_name
+            else:
+                data['user_name'] = 'External / Public Complainant'
+        return data
+
+    def __repr__(self):
+        return f'<Grievance {self.reference_id}: {self.category} ({self.status})>'
+
 
 
 

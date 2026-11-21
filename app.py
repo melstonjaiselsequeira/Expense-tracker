@@ -3,6 +3,8 @@ import csv
 import io
 import re
 import uuid
+import secrets
+import time
 from functools import wraps
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, jsonify, Response, redirect, url_for, flash, session, has_request_context, send_from_directory
@@ -28,7 +30,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
 
 from database import db, init_db
-from models import Expense, User, SupportTicket, TicketMessage, FAQ, QuickQuestion, ReportHistory, UserConsent
+from models import Expense, User, SupportTicket, TicketMessage, FAQ, QuickQuestion, ReportHistory, UserConsent, Grievance
 
 # ── App Configuration ───
 app = Flask(__name__)
@@ -960,6 +962,8 @@ def budget():
 # ── Support & Help System ──────────────────────────────────────
 SUPPORT_ATTACHMENT_DIR = os.path.join(app.root_path, 'static', 'uploads', 'support_attachments')
 os.makedirs(SUPPORT_ATTACHMENT_DIR, exist_ok=True)
+GRIEVANCE_ATTACHMENT_DIR = os.path.join(app.root_path, 'static', 'uploads', 'grievance_attachments')
+os.makedirs(GRIEVANCE_ATTACHMENT_DIR, exist_ok=True)
 ALLOWED_ATTACHMENT_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp', 'gif'}
 MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024  # 5 MB
 
@@ -1204,6 +1208,9 @@ def admin_support_dashboard():
     recent_tickets = SupportTicket.query.order_by(SupportTicket.created_at.desc()).limit(8).all()
     active_users_count = db.session.query(SupportTicket.user_id).distinct().count()
 
+    grievances_total = Grievance.query.count()
+    grievances_open = Grievance.query.filter(Grievance.status.in_(['Submitted', 'Under Review'])).count()
+
     return jsonify({
         'stats': {
             'total_tickets': total_tickets,
@@ -1216,7 +1223,9 @@ def admin_support_dashboard():
                 'general_query': queries_count,
                 'report_problem': problems_count,
                 'feature_request': features_count,
-            }
+            },
+            'grievances_total': grievances_total,
+            'grievances_open': grievances_open
         },
         'recent_tickets': [t.to_dict(include_user=True) for t in recent_tickets]
     }), 200
@@ -2876,6 +2885,17 @@ def delete_user_account():
                         except Exception:
                             pass
 
+        # DPDP Compliance: Purge any grievance attachments uploaded by user
+        if hasattr(user_to_delete, 'grievances') and user_to_delete.grievances:
+            for grv in user_to_delete.grievances:
+                if grv.attachment_path:
+                    att_path = os.path.join(GRIEVANCE_ATTACHMENT_DIR, grv.attachment_path)
+                    if os.path.exists(att_path) and os.path.isfile(att_path):
+                        try:
+                            os.remove(att_path)
+                        except Exception:
+                            pass
+
         # Clear authentication session
         logout_user()
         session.clear()
@@ -3080,6 +3100,404 @@ def handle_security_report_submission():
         'message': 'Your security report has been submitted successfully.',
         'ticket_id': ticket_id
     }), 201
+
+
+# ── DPDP Internal Grievance Redressal System ──────────────────────────────────
+def get_grievance_officer_info():
+    """Retrieve designated Grievance & Data Protection Officer details.
+
+    If not explicitly configured in environment variables, do NOT invent details;
+    display clear statutory message per DPDP Act, 2023 Section 13.
+    """
+    name = (os.getenv('GRIEVANCE_OFFICER_NAME') or '').strip()
+    email = (os.getenv('GRIEVANCE_OFFICER_EMAIL') or '').strip()
+    phone = (os.getenv('GRIEVANCE_OFFICER_PHONE') or '').strip()
+    address = (os.getenv('GRIEVANCE_OFFICER_ADDRESS') or '').strip()
+    organization = os.getenv('ORGANIZATION_NAME', 'ExpenseFlow')
+
+    is_configured = bool(name or email or phone or address)
+    statutory_notice = (
+        "The designated Data Protection & Grievance Officer contact information has not been customized for this environment. "
+        "Under Section 13 of the Digital Personal Data Protection Act, 2023, personal data grievances submitted through this portal "
+        "are directly routed to the authorized system administrator and recorded with strict confidentiality."
+    )
+
+    return {
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'address': address,
+        'organization': organization,
+        'is_configured': is_configured,
+        'statutory_notice': statutory_notice
+    }
+
+
+@app.route('/grievance', methods=['GET'])
+def grievance_portal():
+    """Dedicated internal Grievance Redressal Portal under DPDP Act, 2023 (Section 13)."""
+    officer_info = get_grievance_officer_info()
+    prefill_email = current_user.email if current_user.is_authenticated else ''
+    return render_template('grievance.html', officer_info=officer_info, prefill_email=prefill_email)
+
+
+@app.route('/api/grievance/submit', methods=['POST'])
+@limiter.limit("10 per minute")
+@csrf.exempt
+def submit_grievance():
+    """Submit an internal privacy grievance under DPDP Act, 2023."""
+    # Support both form data (with optional file) and JSON
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+        contact_email = (data.get('contact_email') or '').strip()
+        category = (data.get('category') or '').strip()
+        subject = (data.get('subject') or '').strip()
+        description = (data.get('description') or '').strip()
+        attachment_file = None
+    else:
+        contact_email = (request.form.get('contact_email') or '').strip()
+        category = (request.form.get('category') or '').strip()
+        subject = (request.form.get('subject') or '').strip()
+        description = (request.form.get('description') or '').strip()
+        attachment_file = request.files.get('attachment')
+
+    if not contact_email or '@' not in contact_email or '.' not in contact_email:
+        return jsonify({'error': 'A valid contact email address is required.', 'code': 'INVALID_EMAIL'}), 400
+
+    if not category:
+        return jsonify({'error': 'Complaint category is required.', 'code': 'CATEGORY_REQUIRED'}), 400
+
+    if not subject or len(subject) < 5:
+        return jsonify({'error': 'Subject must be at least 5 characters long.', 'code': 'INVALID_SUBJECT'}), 400
+
+    if not description or len(description) < 15:
+        return jsonify({'error': 'Description must be at least 15 characters long.', 'code': 'INVALID_DESCRIPTION'}), 400
+
+    # Handle optional attachment
+    attachment_filename = None
+    if attachment_file and attachment_file.filename:
+        allowed_exts = {'png', 'jpg', 'jpeg', 'webp', 'pdf'}
+        filename = attachment_file.filename
+        ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+        if ext not in allowed_exts:
+            return jsonify({'error': f'Invalid file format. Allowed types: {", ".join(sorted(allowed_exts))}', 'code': 'INVALID_FILE_TYPE'}), 400
+
+        attachment_file.seek(0, os.SEEK_END)
+        size = attachment_file.tell()
+        attachment_file.seek(0)
+        if size > 5 * 1024 * 1024:
+            return jsonify({'error': 'Attachment exceeds maximum allowed size of 5 MB.', 'code': 'FILE_TOO_LARGE'}), 400
+
+        clean_name = secure_filename(filename)
+        unique_name = f"{int(time.time())}_{secrets.token_hex(4)}_{clean_name}"
+        attachment_file.save(os.path.join(GRIEVANCE_ATTACHMENT_DIR, unique_name))
+        attachment_filename = unique_name
+
+    # Unique Reference ID: GRV-YYYYMMDD-XXXXXX
+    today_str = datetime.utcnow().strftime('%Y%m%d')
+    ref_token = secrets.token_hex(3).upper()
+    reference_id = f"GRV-{today_str}-{ref_token}"
+
+    # Determine user link if available
+    linked_user_id = None
+    if current_user.is_authenticated:
+        linked_user_id = current_user.id
+    else:
+        existing_user = User.query.filter_by(email=contact_email.lower()).first()
+        if existing_user:
+            linked_user_id = existing_user.id
+
+    grievance = Grievance(
+        reference_id=reference_id,
+        user_id=linked_user_id,
+        contact_email=contact_email.lower(),
+        category=category,
+        subject=subject,
+        description=description,
+        attachment_path=attachment_filename,
+        status='Submitted'
+    )
+    db.session.add(grievance)
+    db.session.commit()
+
+    tracking_url = f"{get_app_url()}/grievance?ref={reference_id}&email={contact_email}"
+
+    # Send confirmation email to user
+    try:
+        user_confirm_html = build_email_html(
+            title=f"Privacy Grievance Acknowledged ({reference_id})",
+            recipient_email=contact_email,
+            description_text=(
+                f"Hello,<br><br>"
+                f"Your formal privacy grievance has been received and logged in ExpenseFlow's compliance system under the Digital Personal Data Protection (DPDP) Act, 2023.<br><br>"
+                f"<strong>Reference Number:</strong> <span style='font-family:monospace; font-weight:bold; color:#635bff;'>{reference_id}</span><br>"
+                f"<strong>Category:</strong> {category}<br>"
+                f"<strong>Subject:</strong> {subject}<br>"
+                f"<strong>Current Status:</strong> Submitted (Under Queue)<br><br>"
+                f"Our Grievance Officer will review your submission and take necessary actions in accordance with statutory guidelines. "
+                f"You may track real-time progress using your reference number and contact email."
+            ),
+            button_text="Track Grievance Status",
+            button_url=tracking_url,
+            note_text="Please retain your reference number for all future communications regarding this matter."
+        )
+        send_email(
+            contact_email,
+            f"Privacy Grievance Received — {reference_id}",
+            f"Your privacy grievance {reference_id} ({subject}) has been received. You can track status at {tracking_url}",
+            html_body=user_confirm_html
+        )
+    except Exception as e:
+        print(f"Notice: Grievance user acknowledgement email dispatch log: {e}", flush=True)
+
+    # Send notification email to Grievance Officer / Admin
+    try:
+        officer_email = os.getenv('GRIEVANCE_OFFICER_EMAIL')
+        target_recipients = []
+        if officer_email:
+            target_recipients.append(officer_email)
+        else:
+            admin_emails_str = os.getenv('ADMIN_EMAILS', '')
+            target_recipients = [e.strip() for e in admin_emails_str.split(',') if e.strip()]
+            if not target_recipients:
+                target_recipients = [os.getenv('FROM_EMAIL', 'nmj.kompany@gmail.com')]
+
+        admin_alert_html = build_email_html(
+            title=f"New DPDP Privacy Grievance ({reference_id})",
+            recipient_email="Grievance Officer / Administrator",
+            description_text=(
+                f"A new formal privacy grievance has been submitted under the DPDP Act, 2023:<br><br>"
+                f"<strong>Reference ID:</strong> {reference_id}<br>"
+                f"<strong>Complainant Email:</strong> {contact_email}<br>"
+                f"<strong>Category:</strong> {category}<br>"
+                f"<strong>Subject:</strong> {subject}<br><br>"
+                f"<strong>Description:</strong><br>"
+                f"<blockquote style='margin:10px 0; padding:12px 16px; background:#f8fafc; border-left:3px solid #635bff; font-size:14px; line-height:1.6;'>{description}</blockquote><br>"
+                f"{'<strong>Attachment:</strong> Included<br>' if attachment_filename else ''}"
+                f"Please log in to the ExpenseFlow Admin Support / Grievance section to review and respond."
+            ),
+            button_text="Review in Admin Dashboard",
+            button_url=f"{get_app_url()}/dashboard?view=admin-grievances"
+        )
+        for recipient in set(target_recipients):
+            send_email(
+                recipient,
+                f"[DPDP Grievance] New Grievance Submitted: {reference_id}",
+                f"New DPDP Grievance {reference_id} submitted by {contact_email}.\nSubject: {subject}\nCategory: {category}\n\n{description}",
+                html_body=admin_alert_html
+            )
+    except Exception as e:
+        print(f"Notice: Grievance officer alert email dispatch log: {e}", flush=True)
+
+    return jsonify({
+        'message': 'Grievance submitted successfully.',
+        'reference_id': reference_id,
+        'status': 'Submitted'
+    }), 201
+
+
+@app.route('/api/grievance/status', methods=['GET'])
+def get_grievance_status():
+    """Retrieve grievance status and officer response.
+
+    Requires BOTH reference_id AND contact_email match to prevent unauthorized viewing.
+    """
+    ref_id = (request.args.get('reference_id') or '').strip()
+    email = (request.args.get('email') or '').strip().lower()
+
+    if not ref_id or not email:
+        return jsonify({'error': 'Both Reference Number and Contact Email are required.', 'code': 'MISSING_FIELDS'}), 400
+
+    grievance = Grievance.query.filter_by(reference_id=ref_id).first()
+    if not grievance:
+        return jsonify({'error': 'No matching grievance found. Please check your reference number and contact email.', 'code': 'NOT_FOUND'}), 404
+
+    # Case-insensitive email match check
+    if grievance.contact_email.lower() != email:
+        return jsonify({'error': 'No matching grievance found. Please check your reference number and contact email.', 'code': 'NOT_FOUND'}), 404
+
+    return jsonify({'grievance': grievance.to_dict()}), 200
+
+
+@app.route('/api/user/grievances', methods=['GET'])
+@login_required
+def get_user_grievances():
+    """List grievances filed by the currently authenticated user."""
+    grievances = Grievance.query.filter(
+        db.or_(Grievance.user_id == current_user.id, Grievance.contact_email == current_user.email.lower())
+    ).order_by(Grievance.created_at.desc()).all()
+
+    return jsonify({'grievances': [g.to_dict() for g in grievances]}), 200
+
+
+@app.route('/api/admin/grievances', methods=['GET'])
+@login_required
+@admin_required
+def admin_list_grievances():
+    """List all DPDP grievances with optional status/search filters (Admin only)."""
+    status_filter = request.args.get('status')
+    category_filter = request.args.get('category')
+    search_query = request.args.get('search')
+
+    query = Grievance.query
+
+    if status_filter and status_filter != 'All':
+        query = query.filter_by(status=status_filter)
+    if category_filter and category_filter != 'All':
+        query = query.filter_by(category=category_filter)
+    if search_query:
+        term = f"%{search_query}%"
+        query = query.filter(
+            db.or_(
+                Grievance.reference_id.ilike(term),
+                Grievance.contact_email.ilike(term),
+                Grievance.subject.ilike(term),
+                Grievance.description.ilike(term)
+            )
+        )
+
+    grievances = query.order_by(Grievance.created_at.desc()).all()
+    return jsonify({
+        'grievances': [g.to_dict(include_admin_details=True) for g in grievances],
+        'total': len(grievances)
+    }), 200
+
+
+@app.route('/api/admin/grievances/<int:grievance_id>', methods=['GET'])
+@login_required
+@admin_required
+def admin_get_grievance(grievance_id):
+    """Retrieve full details of a specific grievance (Admin only)."""
+    grievance = db.session.get(Grievance, grievance_id)
+    if not grievance:
+        return jsonify({'error': 'Grievance not found', 'code': 'NOT_FOUND'}), 404
+    return jsonify({'grievance': grievance.to_dict(include_admin_details=True)}), 200
+
+
+@app.route('/api/admin/grievances/<int:grievance_id>', methods=['PATCH'])
+@login_required
+@admin_required
+@csrf.exempt
+def admin_update_grievance(grievance_id):
+    """Update grievance status and admin notes (Admin only)."""
+    grievance = db.session.get(Grievance, grievance_id)
+    if not grievance:
+        return jsonify({'error': 'Grievance not found', 'code': 'NOT_FOUND'}), 404
+
+    data = request.get_json(silent=True) or {}
+    new_status = data.get('status')
+    admin_notes = data.get('admin_notes')
+
+    valid_statuses = ['Submitted', 'Under Review', 'Responded', 'Resolved']
+    if new_status:
+        if new_status not in valid_statuses:
+            return jsonify({'error': f'Invalid status. Must be one of: {", ".join(valid_statuses)}', 'code': 'INVALID_STATUS'}), 400
+        grievance.status = new_status
+
+    if admin_notes is not None:
+        grievance.admin_notes = admin_notes
+
+    grievance.updated_at = datetime.utcnow()
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Grievance updated successfully',
+        'grievance': grievance.to_dict(include_admin_details=True)
+    }), 200
+
+
+@app.route('/api/admin/grievances/<int:grievance_id>/respond', methods=['POST'])
+@login_required
+@admin_required
+@csrf.exempt
+def admin_respond_grievance(grievance_id):
+    """Submit official Grievance Officer response and notify complainant via email (Admin only)."""
+    grievance = db.session.get(Grievance, grievance_id)
+    if not grievance:
+        return jsonify({'error': 'Grievance not found', 'code': 'NOT_FOUND'}), 404
+
+    data = request.get_json(silent=True) or {}
+    response_text = (data.get('response') or '').strip()
+    new_status = (data.get('status') or 'Responded').strip()
+    admin_notes = data.get('admin_notes')
+
+    if not response_text:
+        return jsonify({'error': 'Response text cannot be empty', 'code': 'EMPTY_RESPONSE'}), 400
+
+    valid_statuses = ['Submitted', 'Under Review', 'Responded', 'Resolved']
+    if new_status not in valid_statuses:
+        new_status = 'Responded'
+
+    grievance.admin_response = response_text
+    grievance.status = new_status
+    if admin_notes is not None:
+        grievance.admin_notes = admin_notes
+    grievance.updated_at = datetime.utcnow()
+    db.session.commit()
+
+    tracking_url = f"{get_app_url()}/grievance?ref={grievance.reference_id}&email={grievance.contact_email}"
+
+    # Non-blocking email dispatch to complainant
+    try:
+        officer_info = get_grievance_officer_info()
+        officer_signature = officer_info['name'] if officer_info['name'] else 'Grievance Redressal Team'
+
+        response_email_html = build_email_html(
+            title=f"Official Grievance Decision / Response ({grievance.reference_id})",
+            recipient_email=grievance.contact_email,
+            description_text=(
+                f"Hello,<br><br>"
+                f"The Grievance Officer has completed review and issued an official response regarding your personal data grievance <strong>\"{grievance.subject}\"</strong> (Reference: <code>{grievance.reference_id}</code>):<br><br>"
+                f"<blockquote style='margin:10px 0; padding:12px 16px; background:#f8fafc; border-left:3px solid #635bff; font-size:14px; line-height:1.6;'>{response_text}</blockquote><br>"
+                f"<strong>Current Status:</strong> {grievance.status}<br><br>"
+                f"<strong>Signed:</strong> {officer_signature}, Grievance Officer<br><br>"
+                f"Under the DPDP Act, 2023, if you are not satisfied with this resolution, you may pursue statutory remedies through the Data Protection Board of India."
+            ),
+            button_text="View in Grievance Portal",
+            button_url=tracking_url
+        )
+        send_email(
+            grievance.contact_email,
+            f"[{grievance.reference_id}] Official Response: {grievance.subject}",
+            f"Official response for {grievance.reference_id}:\n\n{response_text}\n\nCurrent Status: {grievance.status}\n\nTrack: {tracking_url}",
+            html_body=response_email_html
+        )
+    except Exception as e:
+        print(f"Notice: Grievance response notification email log: {e}", flush=True)
+
+    return jsonify({
+        'message': 'Official response saved and dispatched to complainant successfully',
+        'grievance': grievance.to_dict(include_admin_details=True)
+    }), 200
+
+
+@app.route('/api/grievance/attachment/<path:filename>', methods=['GET'])
+def get_grievance_attachment(filename):
+    """Download/view a grievance attachment securely.
+
+    Allowed only for:
+    - Authenticated administrators
+    - The authenticated user who owns the grievance
+    """
+    clean_filename = secure_filename(filename)
+    filepath = os.path.join(GRIEVANCE_ATTACHMENT_DIR, clean_filename)
+    if not os.path.exists(filepath):
+        return jsonify({'error': 'Attachment not found', 'code': 'NOT_FOUND'}), 404
+
+    # Verify authorization
+    is_authorized = False
+    if current_user.is_authenticated:
+        if getattr(current_user, 'is_admin_user', False):
+            is_authorized = True
+        else:
+            g = Grievance.query.filter_by(attachment_path=clean_filename).first()
+            if g and (g.user_id == current_user.id or g.contact_email == current_user.email.lower()):
+                is_authorized = True
+
+    if not is_authorized:
+        return jsonify({'error': 'Unauthorized to view this attachment', 'code': 'UNAUTHORIZED'}), 403
+
+    return send_from_directory(GRIEVANCE_ATTACHMENT_DIR, clean_filename)
 
 
 class Config:

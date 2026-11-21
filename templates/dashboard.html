@@ -112,6 +112,11 @@
                 <i class="fas fa-user-clock"></i>
                 <span>User Support History</span>
             </a>
+            <a href="#" class="nav-item {% if active_view == 'admin-grievances' %}active{% endif %}" data-view="admin-grievances" id="nav-admin-grievances" title="Privacy Grievances (DPDP Act)">
+                <i class="fas fa-shield-halved"></i>
+                <span>Privacy Grievances</span>
+                <span class="nav-badge" id="sidebar-badge-grievances">0</span>
+            </a>
 
             <div class="sidebar-section-label" style="margin-top: 1.15rem;">PERSONAL FINANCES</div>
             <a href="/dashboard" class="nav-item {% if active_view == 'dashboard' %}active{% endif %}" data-view="dashboard" id="nav-dashboard">
@@ -381,6 +386,8 @@
             </div>
         </section>
 
+        
+
         <!-- ── Expenses View ── -->
         <section class="view {% if active_view == 'expenses' %}active{% endif %}" id="view-expenses">
             <div class="view-header">
@@ -541,6 +548,8 @@
             </div>
         </section>
 
+        
+
         <!-- ── Download Reports View ── -->
         <section class="view {% if active_view == 'reports' %}active{% endif %}" id="view-reports">
             <div class="view-header">
@@ -689,6 +698,8 @@
                 </div>
             </div>
         </section>
+
+        
 
         <!-- ── Help & Support View ── -->
         <section class="view {% if active_view == 'support' %}active{% endif %}" id="view-support">
@@ -956,6 +967,8 @@
             </div>
         </section>
 
+        
+
         {% if not current_user.is_admin_user %}
         <!-- ══════════════════════════════════════════════════════════════════
              USER SETTINGS VIEW (NORMAL USERS ONLY)
@@ -1167,7 +1180,7 @@
                                 <i class="fas fa-file-contract"></i> View Terms &amp; Conditions
                             </a>
                             <span style="color: var(--text-light);">&bull;</span>
-                            <a href="mailto:nmj.kompany@gmail.com" style="color: var(--accent); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                            <a href="/grievance" style="color: var(--accent); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
                                 <i class="fas fa-headset"></i> Contact Grievance Officer
                             </a>
                         </div>
@@ -1196,6 +1209,8 @@
                 </div>
             </div>
         </section>
+
+        
 
         <!-- ═══ Delete Account Confirmation Modal ═══ -->
         <div class="modal-overlay" id="delete-account-modal-overlay">
@@ -1261,6 +1276,7 @@
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management (<span class="admin-pill-faqs">0</span>)</button>
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-grievances"><i class="fas fa-shield-halved"></i> Privacy Grievances (<span class="admin-pill-grievances">0</span>)</button>
             </div>
 
             <!-- 4 Key Metrics Stat Cards -->
@@ -1408,6 +1424,8 @@
             </div>
         </section>
 
+        
+
         <!-- ── Section 2: All Support Tickets ── -->
         <section class="view {% if active_view == 'admin-all-tickets' %}active{% endif %}" id="view-admin-all-tickets">
             <div class="view-header">
@@ -1427,6 +1445,7 @@
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management</button>
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-grievances"><i class="fas fa-shield-halved"></i> Privacy Grievances (<span class="admin-pill-grievances">0</span>)</button>
             </div>
 
             <!-- Filter & Search Bar -->
@@ -1493,6 +1512,8 @@
             </div>
         </section>
 
+        
+
         <!-- ── Section 3: General Queries ── -->
         <section class="view {% if active_view == 'admin-queries' %}active{% endif %}" id="view-admin-queries">
             <div class="view-header">
@@ -1512,6 +1533,7 @@
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management</button>
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-grievances"><i class="fas fa-shield-halved"></i> Privacy Grievances (<span class="admin-pill-grievances">0</span>)</button>
             </div>
 
             <div class="admin-support-filter-card">
@@ -1562,6 +1584,8 @@
             </div>
         </section>
 
+        
+
         <!-- ── Section 4: Reported Problems ── -->
         <section class="view {% if active_view == 'admin-problems' %}active{% endif %}" id="view-admin-problems">
             <div class="view-header">
@@ -1581,6 +1605,7 @@
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management</button>
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-grievances"><i class="fas fa-shield-halved"></i> Privacy Grievances (<span class="admin-pill-grievances">0</span>)</button>
             </div>
 
             <div class="admin-support-filter-card">
@@ -1636,6 +1661,8 @@
             </div>
         </section>
 
+        
+
         <!-- ── Section 5: Feature Requests ── -->
         <section class="view {% if active_view == 'admin-features' %}active{% endif %}" id="view-admin-features">
             <div class="view-header">
@@ -1655,6 +1682,7 @@
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management</button>
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-grievances"><i class="fas fa-shield-halved"></i> Privacy Grievances (<span class="admin-pill-grievances">0</span>)</button>
             </div>
 
             <div class="admin-support-filter-card">
@@ -1705,6 +1733,8 @@
             </div>
         </section>
 
+        
+
         <!-- ── Section 6: Ticket Conversations ── -->
         <section class="view {% if active_view == 'admin-conversations' %}active{% endif %}" id="view-admin-conversations">
             <div class="view-header">
@@ -1724,6 +1754,7 @@
                 <button type="button" class="admin-tab-btn active" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management</button>
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-grievances"><i class="fas fa-shield-halved"></i> Privacy Grievances (<span class="admin-pill-grievances">0</span>)</button>
             </div>
 
             <!-- Conversation Split Layout -->
@@ -1835,6 +1866,8 @@
             </div>
         </section>
 
+        
+
         <!-- ── Section 7: FAQ Management ── -->
         <section class="view {% if active_view == 'admin-faq' %}active{% endif %}" id="view-admin-faq">
             <div class="view-header">
@@ -1859,6 +1892,7 @@
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
                 <button type="button" class="admin-tab-btn active" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management (<span class="admin-pill-faqs">0</span>)</button>
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-grievances"><i class="fas fa-shield-halved"></i> Privacy Grievances (<span class="admin-pill-grievances">0</span>)</button>
             </div>
 
             <div class="admin-support-filter-card">
@@ -1909,6 +1943,8 @@
             </div>
         </section>
 
+        
+
         <!-- ── Section 8: User Support History ── -->
         <section class="view {% if active_view == 'admin-user-history' %}active{% endif %}" id="view-admin-user-history">
             <div class="view-header">
@@ -1928,6 +1964,7 @@
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
                 <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management</button>
                 <button type="button" class="admin-tab-btn active" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-grievances"><i class="fas fa-shield-halved"></i> Privacy Grievances (<span class="admin-pill-grievances">0</span>)</button>
             </div>
 
             <!-- User Selector Bar -->
@@ -2013,6 +2050,91 @@
                 </div>
             </div>
         </section>
+
+        <!-- ── Section: Privacy Grievances & Data Protection (DPDP Act, 2023) ── -->
+        <section class="view {% if active_view == 'admin-grievances' %}active{% endif %}" id="view-admin-grievances">
+            <div class="view-header">
+                <div>
+                    <h1><i class="fas fa-shield-halved" style="color: var(--accent); margin-right: 0.5rem;"></i> Privacy Grievances &amp; Data Protection</h1>
+                    <p class="subtitle">DPDP Act, 2023 Statutory Compliance Queue &amp; Grievance Redressal Records</p>
+                </div>
+            </div>
+
+            <!-- Admin Top Navigation Tabs -->
+            <div class="admin-tabs-nav">
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-dashboard"><i class="fas fa-gauge-high"></i> Support Dashboard</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-all-tickets"><i class="fas fa-inbox"></i> All Tickets</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-queries"><i class="fas fa-circle-question"></i> General Queries</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-problems"><i class="fas fa-triangle-exclamation"></i> Reported Problems</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-features"><i class="fas fa-lightbulb"></i> Feature Requests</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-conversations"><i class="fas fa-comments"></i> Ticket Conversations</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-faq"><i class="fas fa-book-open"></i> FAQ Management</button>
+                <button type="button" class="admin-tab-btn" data-admin-view="admin-user-history"><i class="fas fa-user-clock"></i> User Support History</button>
+                <button type="button" class="admin-tab-btn active" data-admin-view="admin-grievances"><i class="fas fa-shield-halved"></i> Privacy Grievances (<span class="admin-pill-grievances">0</span>)</button>
+            </div>
+
+            <!-- Filter & Search Bar -->
+            <div class="admin-support-filter-card">
+                <div class="admin-search-wrap">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="admin-grv-search" placeholder="Search by Reference ID, email, subject, or description..." class="admin-search-input">
+                </div>
+                <div class="admin-filters-wrap">
+                    <select id="admin-grv-filter-status" class="filter-select">
+                        <option value="All">All Statuses</option>
+                        <option value="Submitted">Submitted</option>
+                        <option value="Under Review">Under Review</option>
+                        <option value="Responded">Responded</option>
+                        <option value="Resolved">Resolved</option>
+                    </select>
+                    <select id="admin-grv-filter-category" class="filter-select">
+                        <option value="All">All DPDP Categories</option>
+                        <option value="Right to Access / Data Summary Request">Right to Access</option>
+                        <option value="Right to Correction / Updating Personal Data">Right to Correction</option>
+                        <option value="Right to Erasure / Account & Data Deletion">Right to Erasure</option>
+                        <option value="Right to Nominate / Representative Authorization">Right to Nominate</option>
+                        <option value="Withdrawal of Consent / Preference Concern">Withdrawal of Consent</option>
+                        <option value="Unauthorized Data Processing / Non-Compliance">Unauthorized Processing</option>
+                        <option value="Data Security / Incident or Breach Concern">Data Security / Breach</option>
+                        <option value="Other DPDP Privacy Grievance">Other Privacy Grievance</option>
+                    </select>
+                    <button class="btn-secondary" id="btn-admin-grv-refresh" title="Refresh Grievances">
+                        <i class="fas fa-arrows-rotate"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Table Card -->
+            <div class="expenses-table-card" style="margin-top: 1.25rem;">
+                <div class="chart-header">
+                    <h3>Filed Privacy Grievances (<span id="admin-grv-count">0</span>)</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="expenses-table" id="admin-grv-table">
+                        <thead>
+                            <tr>
+                                <th>Reference ID</th>
+                                <th>Complainant</th>
+                                <th>Category</th>
+                                <th>Subject</th>
+                                <th>Submitted Date</th>
+                                <th>Status</th>
+                                <th style="text-align: right;">Review &amp; Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-grv-tbody">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                    <div class="support-empty-state" id="admin-grv-empty" style="display: none; padding: 2.5rem 1rem;">
+                        <div class="empty-icon"><i class="fas fa-shield-check"></i></div>
+                        <h4>No Privacy Grievances Found</h4>
+                        <p>There are no privacy grievances matching your current filter criteria.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         {% endif %}
 
     </main>
@@ -2404,6 +2526,77 @@
                     </button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- ═══ Admin Grievance Review & Response Modal ═══ -->
+    <div class="modal-overlay" id="admin-grv-modal-overlay">
+        <div class="modal" id="admin-grv-modal" style="max-width: 680px;">
+            <div class="modal-header">
+                <h2><i class="fas fa-shield-halved" style="color: var(--accent);"></i> <span id="admin-grv-modal-title">Review Privacy Grievance</span></h2>
+                <button class="modal-close" id="admin-grv-modal-close" title="Close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="padding: 1.5rem;">
+                <input type="hidden" id="admin-grv-modal-id">
+
+                <!-- Meta Info Strip -->
+                <div style="background: var(--bg-secondary, #f8fafc); border-radius: 8px; padding: 12px 16px; margin-bottom: 1.25rem; font-size: 0.85rem; border: 1px solid var(--border-light, #e2e8f0);">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px;">
+                        <div>Reference: <strong id="grv-modal-ref" style="font-family: monospace; color: var(--accent);">-</strong></div>
+                        <div>Complainant: <strong id="grv-modal-email">-</strong></div>
+                        <div>Submitted: <span id="grv-modal-date">-</span></div>
+                        <div>Category: <span id="grv-modal-cat" style="font-weight: 600;">-</span></div>
+                    </div>
+                </div>
+
+                <!-- Subject & Description -->
+                <div style="margin-bottom: 1.25rem;">
+                    <h3 id="grv-modal-subject" style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin: 0 0 8px;">-</h3>
+                    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Complainant Description:</div>
+                    <div id="grv-modal-desc" style="background: #ffffff; border: 1px solid var(--border-light, #e2e8f0); border-radius: 6px; padding: 12px; font-size: 0.9rem; line-height: 1.6; color: var(--text-primary); max-height: 140px; overflow-y: auto; white-space: pre-wrap;">-</div>
+                </div>
+
+                <!-- Attachment Link -->
+                <div id="grv-modal-attachment-wrap" style="margin-bottom: 1.25rem; display: none;">
+                    <div style="font-size: 0.8rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 4px;">Attachment:</div>
+                    <a id="grv-modal-attachment-link" href="#" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 600; text-decoration: none; font-size: 0.88rem;">
+                        <i class="fas fa-paperclip"></i> View Attached File
+                    </a>
+                </div>
+
+                <!-- Status Select -->
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="grv-modal-status" style="font-size: 0.85rem; font-weight: 700;">Grievance Status <span style="color: #ef4444;">*</span></label>
+                    <select id="grv-modal-status" class="filter-select" style="width: 100%;">
+                        <option value="Submitted">Submitted</option>
+                        <option value="Under Review">Under Review</option>
+                        <option value="Responded">Responded</option>
+                        <option value="Resolved">Resolved</option>
+                    </select>
+                </div>
+
+                <!-- Admin Internal Notes -->
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="grv-modal-notes" style="font-size: 0.85rem; font-weight: 700;">Internal Admin Notes <span style="font-weight: 400; color: var(--text-muted);">(Confidential / Not sent to complainant)</span></label>
+                    <textarea id="grv-modal-notes" rows="2" placeholder="Record internal compliance review observations, verification checks, or internal actions..." class="admin-reply-input" style="width: 100%; box-sizing: border-box;"></textarea>
+                </div>
+
+                <!-- Official Grievance Officer Response -->
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label for="grv-modal-response" style="font-size: 0.85rem; font-weight: 700;">Official Grievance Officer Response <span style="font-weight: 400; color: var(--text-muted);">(Will be emailed to complainant &amp; shown in portal)</span></label>
+                    <textarea id="grv-modal-response" rows="4" placeholder="Enter official findings, actions taken, or statutory explanation to be sent to the complainant..." class="admin-reply-input" style="width: 100%; box-sizing: border-box;"></textarea>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap;">
+                    <button type="button" class="btn-secondary" id="btn-admin-grv-save-status">
+                        <i class="fas fa-floppy-disk"></i> Save Status / Notes Only
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btn-admin-grv-send-response" style="background: var(--accent); color: #ffffff;">
+                        <i class="fas fa-paper-plane"></i> Send Official Response &amp; Notify
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 

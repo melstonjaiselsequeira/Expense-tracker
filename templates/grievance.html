@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grievance Redressal Portal — ExpenseFlow</title>
+    <meta name="description" content="Official DPDP Grievance Redressal Portal for ExpenseFlow. Submit and track personal data protection grievances under the Digital Personal Data Protection Act, 2023.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/static/img/favicon.png">
+    <link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="/static/css/landing.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=2.3">
+    <style>
+        .grievance-wrapper {
+            min-height: 100vh;
+            background-color: var(--bg-body, #f8fafc);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .grievance-navbar {
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-light, #e2e8f0);
+            padding: 1rem 1.5rem;
+        }
+
+        .grievance-nav-container {
+            max-width: 1080px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .grievance-main-content {
+            max-width: 900px;
+            margin: 2.5rem auto 4rem;
+            padding: 0 1.5rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .grievance-header-card {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .grievance-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: rgba(99, 91, 255, 0.1);
+            color: var(--accent, #635bff);
+            border: 1px solid rgba(99, 91, 255, 0.25);
+            border-radius: 9999px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .officer-info-card {
+            background: #ffffff;
+            border: 1px solid var(--border-light, #e2e8f0);
+            border-radius: var(--radius-lg, 12px);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .officer-info-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 1rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-light, #f1f5f9);
+        }
+
+        .officer-avatar-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
+            background: rgba(99, 91, 255, 0.1);
+            color: var(--accent, #635bff);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+
+        .portal-tabs-nav {
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid var(--border-light, #e2e8f0);
+            margin-bottom: 1.75rem;
+        }
+
+        .portal-tab-btn {
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            padding: 0.75rem 1.25rem;
+            font-family: inherit;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-muted, #64748b);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .portal-tab-btn:hover {
+            color: var(--text-primary, #0f172a);
+        }
+
+        .portal-tab-btn.active {
+            color: var(--accent, #635bff);
+            border-bottom-color: var(--accent, #635bff);
+        }
+
+        .form-card {
+            background: #ffffff;
+            border: 1px solid var(--border-light, #e2e8f0);
+            border-radius: var(--radius-lg, 12px);
+            padding: 2rem;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+        }
+
+        .status-badge-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .status-submitted { background: #eff6ff; color: #2563eb; }
+        .status-under-review { background: #fefce8; color: #ca8a04; }
+        .status-responded { background: #f5f3ff; color: #7c3aed; }
+        .status-resolved { background: #ecfdf5; color: #059669; }
+
+        .timeline-step {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            position: relative;
+            padding-bottom: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="grievance-wrapper">
+        <!-- Top Navigation -->
+        <header class="grievance-navbar">
+            <div class="grievance-nav-container">
+                <a href="/" class="brand-logo" aria-label="ExpenseFlow Home" style="text-decoration: none;">
+                    <div class="brand-logo-icon">
+                        <img src="/static/img/logo.png" alt="ExpenseFlow Logo" class="brand-logo-img">
+                    </div>
+                    <span class="brand-name">Expense<span class="brand-highlight">Flow</span></span>
+                </a>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <a href="/privacy" class="btn btn-secondary btn-sm"><i class="fas fa-file-shield"></i> Privacy Policy</a>
+                    {% if current_user.is_authenticated %}
+                    <a href="/dashboard" class="btn btn-primary btn-sm"><i class="fas fa-chart-pie"></i> Open Dashboard</a>
+                    {% else %}
+                    <a href="/login" class="btn btn-secondary btn-sm">Log In</a>
+                    {% endif %}
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="grievance-main-content">
+            <!-- Header Title -->
+            <div class="grievance-header-card">
+                <span class="grievance-badge">
+                    <i class="fas fa-shield-halved"></i> DPDP Act, 2023 &bull; Section 13
+                </span>
+                <h1 style="font-size: 2.1rem; font-weight: 800; color: var(--text-primary); margin: 0 0 8px;">
+                    Grievance Redressal Portal
+                </h1>
+                <p style="font-size: 1.05rem; color: var(--text-muted); max-width: 640px; margin: 0 auto; line-height: 1.6;">
+                    Submit, manage, and track data protection and privacy grievances directly through ExpenseFlow's internal compliance system.
+                </p>
+            </div>
+
+            <!-- Grievance Officer Contact Information Card -->
+            <div class="officer-info-card">
+                <div class="officer-info-header">
+                    <div class="officer-avatar-icon">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">
+                            Designated Grievance &amp; Data Protection Officer
+                        </h3>
+                        <p style="margin: 2px 0 0; font-size: 0.85rem; color: var(--text-muted);">
+                            Data Fiduciary: {{ officer_info.organization }} &bull; Republic of India
+                        </p>
+                    </div>
+                </div>
+
+                {% if officer_info.is_configured %}
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                    <div>
+                        <span style="font-size: 0.78rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Officer Name</span>
+                        <div style="font-weight: 600; color: var(--text-primary); margin-top: 2px;">{{ officer_info.name or 'Data Protection Officer' }}</div>
+                    </div>
+                    {% if officer_info.email %}
+                    <div>
+                        <span style="font-size: 0.78rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Contact Email</span>
+                        <div style="font-weight: 600; color: var(--text-primary); margin-top: 2px;">{{ officer_info.email }}</div>
+                    </div>
+                    {% endif %}
+                    {% if officer_info.phone %}
+                    <div>
+                        <span style="font-size: 0.78rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Phone</span>
+                        <div style="font-weight: 600; color: var(--text-primary); margin-top: 2px;">{{ officer_info.phone }}</div>
+                    </div>
+                    {% endif %}
+                    {% if officer_info.address %}
+                    <div>
+                        <span style="font-size: 0.78rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Official Address</span>
+                        <div style="font-weight: 600; color: var(--text-primary); margin-top: 2px;">{{ officer_info.address }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div style="background: rgba(99, 91, 255, 0.05); border: 1px dashed rgba(99, 91, 255, 0.3); border-radius: 8px; padding: 14px 18px; margin-top: 0.75rem;">
+                    <div style="font-weight: 700; color: var(--accent); margin-bottom: 4px; font-size: 0.9rem;">
+                        <i class="fas fa-circle-info"></i> Notice: Internal Grievance Routing Active
+                    </div>
+                    <p style="margin: 0; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.55;">
+                        {{ officer_info.statutory_notice }}
+                    </p>
+                </div>
+                {% endif %}
+
+                <div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border-light, #f1f5f9); font-size: 0.82rem; color: var(--text-muted); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;">
+                    <span><i class="fas fa-clock"></i> Statutory Response Time: Within 30 days</span>
+                    <span><i class="fas fa-building-columns"></i> Statutory Recourse: Data Protection Board of India</span>
+                </div>
+            </div>
+
+            <!-- Portal Navigation Tabs -->
+            <div class="portal-tabs-nav">
+                <button type="button" class="portal-tab-btn active" id="tab-btn-submit" onclick="switchGrievanceTab('submit')">
+                    <i class="fas fa-file-pen"></i> Submit Grievance
+                </button>
+                <button type="button" class="portal-tab-btn" id="tab-btn-track" onclick="switchGrievanceTab('track')">
+                    <i class="fas fa-magnifying-glass"></i> Track Grievance Status
+                </button>
+                {% if current_user.is_authenticated %}
+                <button type="button" class="portal-tab-btn" id="tab-btn-my" onclick="switchGrievanceTab('my')">
+                    <i class="fas fa-list-check"></i> My Filed Grievances (<span id="my-grievances-count">0</span>)
+                </button>
+                {% endif %}
+            </div>
+
+            <!-- TAB 1: SUBMIT GRIEVANCE FORM -->
+            <div id="pane-submit" class="form-card">
+                <div id="grievance-alert" class="auth-alert" style="display: none; margin-bottom: 1.5rem;"></div>
+
+                <form id="grievance-form" enctype="multipart/form-data">
+                    <!-- Contact Email -->
+                    <div class="form-group">
+                        <label for="contact_email">Your Contact Email <span style="color: #ef4444;">*</span></label>
+                        <input type="email" id="contact_email" name="contact_email" value="{{ prefill_email }}" required placeholder="name@example.com" autocomplete="email">
+                        <small style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px; display: block;">
+                            Official updates and reference details will be delivered to this email address.
+                        </small>
+                    </div>
+
+                    <!-- Complaint Category -->
+                    <div class="form-group">
+                        <label for="category">Complaint Category <span style="color: #ef4444;">*</span></label>
+                        <select id="category" name="category" required style="width: 100%; padding: 10px 14px; border: 1px solid var(--border-light, #e2e8f0); border-radius: 8px; font-family: inherit; font-size: 0.95rem; background: #ffffff;">
+                            <option value="" disabled selected>-- Select DPDP Grievance Category --</option>
+                            <option value="Right to Access / Data Summary Request">Right to Access / Data Summary Request</option>
+                            <option value="Right to Correction / Updating Personal Data">Right to Correction / Updating Personal Data</option>
+                            <option value="Right to Erasure / Account &amp; Data Deletion">Right to Erasure / Account &amp; Data Deletion</option>
+                            <option value="Right to Nominate / Representative Authorization">Right to Nominate / Representative Authorization</option>
+                            <option value="Withdrawal of Consent / Preference Concern">Withdrawal of Consent / Preference Concern</option>
+                            <option value="Unauthorized Data Processing / Non-Compliance">Unauthorized Data Processing / Non-Compliance</option>
+                            <option value="Data Security / Incident or Breach Concern">Data Security / Incident or Breach Concern</option>
+                            <option value="Other DPDP Privacy Grievance">Other DPDP Privacy Grievance</option>
+                        </select>
+                    </div>
+
+                    <!-- Subject -->
+                    <div class="form-group">
+                        <label for="subject">Subject <span style="color: #ef4444;">*</span></label>
+                        <input type="text" id="subject" name="subject" required placeholder="Brief summary of your privacy concern or data request">
+                    </div>
+
+                    <!-- Description -->
+                    <div class="form-group">
+                        <label for="description">Detailed Description <span style="color: #ef4444;">*</span></label>
+                        <textarea id="description" name="description" rows="5" required placeholder="Please provide clear and specific facts regarding your grievance, including any dates, affected records, or prior communications." style="resize: vertical;"></textarea>
+                    </div>
+
+                    <!-- Optional Attachment -->
+                    <div class="form-group">
+                        <label for="attachment">Supporting Document / Evidence <span style="font-weight: 400; color: var(--text-muted);">(Optional)</span></label>
+                        <input type="file" id="attachment" name="attachment" accept=".png,.jpg,.jpeg,.webp,.pdf">
+                        <small style="color: var(--text-muted); font-size: 0.8rem; margin-top: 4px; display: block;">
+                            Allowed file types: PDF, PNG, JPG, JPEG, WEBP. Maximum file size: 5 MB.
+                        </small>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-primary btn-full" id="btn-submit-grievance" style="padding: 12px; font-size: 1rem; font-weight: 600; margin-top: 10px;">
+                        <i class="fas fa-paper-plane"></i> Submit Grievance to Grievance Officer
+                    </button>
+                </form>
+
+                <!-- Post-Submission Confirmation Screen -->
+                <div id="grievance-success-screen" style="display: none; text-align: center; padding: 20px 10px;">
+                    <i class="fas fa-circle-check" style="font-size: 3.5rem; color: #10b981; margin-bottom: 12px; display: inline-block;"></i>
+                    <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">
+                        Grievance Submitted Successfully
+                    </h2>
+                    <p style="color: var(--text-secondary); font-size: 0.95rem; max-width: 580px; margin: 0 auto 18px; line-height: 1.6;">
+                        Your formal privacy grievance has been recorded in ExpenseFlow's compliance database and assigned to the Grievance Officer.
+                    </p>
+
+                    <div style="background: var(--bg-secondary, #f8fafc); border: 2px dashed var(--border-light, #cbd5e1); border-radius: 10px; padding: 16px; max-width: 420px; margin: 0 auto 20px;">
+                        <span style="font-size: 0.8rem; font-weight: 600; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; display: block; margin-bottom: 4px;">
+                            Official Reference Number
+                        </span>
+                        <span id="submitted-reference-id" style="font-family: monospace; font-size: 1.35rem; font-weight: 800; color: var(--accent);">GRV-PENDING</span>
+                    </div>
+
+                    <div style="background: rgba(99, 91, 255, 0.05); border: 1px solid rgba(99, 91, 255, 0.15); border-radius: 8px; padding: 14px 18px; max-width: 580px; margin: 0 auto 24px; text-align: left; font-size: 0.88rem; color: var(--text-secondary); line-height: 1.55;">
+                        <div style="font-weight: 700; color: var(--accent); margin-bottom: 4px;">
+                            <i class="fas fa-envelope-circle-check"></i> Confirmation Dispatched:
+                        </div>
+                        A formal acknowledgement email has been sent to your contact address containing your reference number and a direct tracking link.
+                    </div>
+
+                    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="trackThisGrievance()">
+                            <i class="fas fa-magnifying-glass"></i> Track Status Now
+                        </button>
+                        <a href="/" class="btn btn-primary btn-sm">
+                            <i class="fas fa-home"></i> Return to Home
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: TRACK GRIEVANCE STATUS -->
+            <div id="pane-track" class="form-card" style="display: none;">
+                <h3 style="margin: 0 0 8px; font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">
+                    Check Grievance Status
+                </h3>
+                <p style="font-size: 0.88rem; color: var(--text-muted); margin: 0 0 1.5rem;">
+                    To protect your privacy, both your official Reference Number and the registered contact email are required to view grievance status.
+                </p>
+
+                <div id="track-alert" class="auth-alert" style="display: none; margin-bottom: 1.25rem;"></div>
+
+                <form id="track-form" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: end;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="track_reference_id">Grievance Reference Number</label>
+                        <input type="text" id="track_reference_id" placeholder="GRV-20261121-AB12CD" required style="font-family: monospace; font-weight: 600;">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="track_email">Contact Email</label>
+                        <input type="email" id="track_email" value="{{ prefill_email }}" placeholder="name@example.com" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" id="btn-track-submit" style="height: 42px; padding: 0 18px; white-space: nowrap;">
+                        <i class="fas fa-search"></i> Check Status
+                    </button>
+                </form>
+
+                <!-- Track Result Card -->
+                <div id="track-result-card" style="display: none; margin-top: 2rem; border-top: 1px solid var(--border-light, #e2e8f0); padding-top: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 1rem;">
+                        <div>
+                            <span id="res-category-badge" class="status-badge-pill" style="background: rgba(99, 91, 255, 0.1); color: var(--accent); margin-bottom: 4px;">Category</span>
+                            <h4 id="res-subject" style="margin: 4px 0 0; font-size: 1.15rem; color: var(--text-primary); font-weight: 700;">Subject</h4>
+                        </div>
+                        <div id="res-status-badge" class="status-badge-pill status-submitted">
+                            Status
+                        </div>
+                    </div>
+
+                    <div style="background: var(--bg-secondary, #f8fafc); border-radius: 8px; padding: 14px 18px; margin-bottom: 1.25rem; font-size: 0.88rem;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-bottom: 10px; color: var(--text-muted); font-size: 0.8rem;">
+                            <div>Reference: <strong id="res-ref" style="font-family: monospace; color: var(--text-primary);"></strong></div>
+                            <div>Submitted: <strong id="res-date" style="color: var(--text-primary);"></strong></div>
+                            <div>Contact: <strong id="res-email" style="color: var(--text-primary);"></strong></div>
+                        </div>
+                        <div style="font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Complainant Description:</div>
+                        <p id="res-desc" style="margin: 0; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; font-size: 0.9rem;"></p>
+                    </div>
+
+                    <!-- Official Grievance Officer Response Box -->
+                    <div id="res-response-section" style="border: 1px solid #c7d2fe; background: #f5f3ff; border-radius: 8px; padding: 16px; margin-bottom: 1rem;">
+                        <div style="font-weight: 700; color: #4338ca; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-reply-all"></i> Official Response from Grievance Officer:
+                        </div>
+                        <p id="res-response-text" style="margin: 0; color: #1e1b4b; line-height: 1.6; font-size: 0.92rem; white-space: pre-wrap;"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: AUTHENTICATED USER'S GRIEVANCES -->
+            {% if current_user.is_authenticated %}
+            <div id="pane-my" class="form-card" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.2rem; font-weight: 700; color: var(--text-primary);">My Privacy Grievances</h3>
+                        <p style="margin: 2px 0 0; font-size: 0.85rem; color: var(--text-muted);">Grievances submitted by your authenticated account.</p>
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="loadMyGrievances()"><i class="fas fa-arrows-rotate"></i> Refresh</button>
+                </div>
+                <div id="my-grievances-list">
+                    <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                        <i class="fas fa-spinner fa-spin"></i> Loading your grievances...
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+
+    <script>
+        let lastSubmittedRef = '';
+        let lastSubmittedEmail = '';
+
+        function switchGrievanceTab(tabId) {
+            document.querySelectorAll('.portal-tab-btn').forEach(btn => btn.classList.remove('active'));
+            ['submit', 'track', 'my'].forEach(id => {
+                const el = document.getElementById('pane-' + id);
+                if (el) el.style.display = 'none';
+            });
+
+            const activeBtn = document.getElementById('tab-btn-' + tabId);
+            const activePane = document.getElementById('pane-' + tabId);
+            if (activeBtn) activeBtn.classList.add('active');
+            if (activePane) activePane.style.display = 'block';
+
+            if (tabId === 'my') {
+                loadMyGrievances();
+            }
+        }
+
+        function showGrievanceAlert(msg, type = 'error') {
+            const box = document.getElementById('grievance-alert');
+            box.className = 'auth-alert ' + type;
+            box.innerHTML = '<i class="fas fa-circle-exclamation"></i> ' + msg;
+            box.style.display = 'block';
+            box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Handle Grievance Submission
+        const grievanceForm = document.getElementById('grievance-form');
+        grievanceForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const alertBox = document.getElementById('grievance-alert');
+            alertBox.style.display = 'none';
+
+            const submitBtn = document.getElementById('btn-submit-grievance');
+            const origHtml = submitBtn.innerHTML;
+
+            const formData = new FormData(grievanceForm);
+            const email = (formData.get('contact_email') || '').trim();
+            const category = (formData.get('category') || '').trim();
+            const subject = (formData.get('subject') || '').trim();
+            const description = (formData.get('description') || '').trim();
+
+            if (!email || !email.includes('@') || !email.includes('.')) {
+                showGrievanceAlert('Please provide a valid contact email address.');
+                return;
+            }
+            if (!category) {
+                showGrievanceAlert('Please select a complaint category.');
+                return;
+            }
+            if (!subject || subject.length < 5) {
+                showGrievanceAlert('Subject must be at least 5 characters long.');
+                return;
+            }
+            if (!description || description.length < 15) {
+                showGrievanceAlert('Please provide a detailed description (at least 15 characters).');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Recording Grievance...';
+
+            try {
+                const response = await fetch('/api/grievance/submit', {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await response.json();
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = origHtml;
+
+                if (response.ok && data.reference_id) {
+                    lastSubmittedRef = data.reference_id;
+                    lastSubmittedEmail = email;
+                    document.getElementById('submitted-reference-id').textContent = data.reference_id;
+                    grievanceForm.style.display = 'none';
+                    document.getElementById('grievance-success-screen').style.display = 'block';
+                } else {
+                    showGrievanceAlert(data.error || 'Failed to submit grievance. Please verify details.');
+                }
+            } catch (err) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = origHtml;
+                showGrievanceAlert('Network error occurred. Please try again.');
+            }
+        });
+
+        function trackThisGrievance() {
+            switchGrievanceTab('track');
+            document.getElementById('track_reference_id').value = lastSubmittedRef;
+            document.getElementById('track_email').value = lastSubmittedEmail;
+            document.getElementById('track-form').dispatchEvent(new Event('submit'));
+        }
+
+        // Handle Track Status Form
+        const trackForm = document.getElementById('track-form');
+        trackForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const alertBox = document.getElementById('track-alert');
+            const resultCard = document.getElementById('track-result-card');
+            alertBox.style.display = 'none';
+            resultCard.style.display = 'none';
+
+            const refId = (document.getElementById('track_reference_id').value || '').trim();
+            const email = (document.getElementById('track_email').value || '').trim();
+
+            if (!refId || !email) {
+                alertBox.className = 'auth-alert error';
+                alertBox.innerHTML = '<i class="fas fa-exclamation-circle"></i> Both Reference Number and Contact Email are required.';
+                alertBox.style.display = 'block';
+                return;
+            }
+
+            const btn = document.getElementById('btn-track-submit');
+            const origText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            try {
+                const resp = await fetch(`/api/grievance/status?reference_id=${encodeURIComponent(refId)}&email=${encodeURIComponent(email)}`);
+                const data = await resp.json();
+                btn.disabled = false;
+                btn.innerHTML = origText;
+
+                if (resp.ok && data.grievance) {
+                    const g = data.grievance;
+                    document.getElementById('res-category-badge').textContent = g.category;
+                    document.getElementById('res-subject').textContent = g.subject;
+                    document.getElementById('res-ref').textContent = g.reference_id;
+                    document.getElementById('res-date').textContent = new Date(g.created_at).toLocaleString();
+                    document.getElementById('res-email').textContent = g.contact_email;
+                    document.getElementById('res-desc').textContent = g.description;
+
+                    const statusBadge = document.getElementById('res-status-badge');
+                    statusBadge.textContent = g.status;
+                    const sLower = (g.status || '').toLowerCase().replace(/\s+/g, '-');
+                    statusBadge.className = 'status-badge-pill status-' + sLower;
+
+                    const respSec = document.getElementById('res-response-section');
+                    if (g.admin_response) {
+                        document.getElementById('res-response-text').textContent = g.admin_response;
+                        respSec.style.display = 'block';
+                    } else {
+                        respSec.style.display = 'none';
+                    }
+
+                    resultCard.style.display = 'block';
+                } else {
+                    alertBox.className = 'auth-alert error';
+                    alertBox.innerHTML = '<i class="fas fa-circle-xmark"></i> ' + (data.error || 'No matching grievance found. Please check reference ID and email.');
+                    alertBox.style.display = 'block';
+                }
+            } catch (err) {
+                btn.disabled = false;
+                btn.innerHTML = origText;
+                alertBox.className = 'auth-alert error';
+                alertBox.innerHTML = '<i class="fas fa-triangle-exclamation"></i> Error communicating with server.';
+                alertBox.style.display = 'block';
+            }
+        });
+
+        // Load Authenticated User's Grievances
+        async function loadMyGrievances() {
+            const listEl = document.getElementById('my-grievances-list');
+            if (!listEl) return;
+            try {
+                const resp = await fetch('/api/user/grievances');
+                if (!resp.ok) {
+                    listEl.innerHTML = '<div style="text-align:center; padding:1.5rem; color:var(--text-muted);">Please log in to view filed grievances.</div>';
+                    return;
+                }
+                const data = await resp.json();
+                const grievances = data.grievances || [];
+                const countBadge = document.getElementById('my-grievances-count');
+                if (countBadge) countBadge.textContent = grievances.length;
+
+                if (grievances.length === 0) {
+                    listEl.innerHTML = '<div style="text-align:center; padding:2rem; color:var(--text-muted);"><i class="fas fa-shield-halved" style="font-size:2rem; margin-bottom:8px; display:block;"></i>No grievances filed on this account.</div>';
+                    return;
+                }
+
+                listEl.innerHTML = grievances.map(g => {
+                    const sLower = (g.status || '').toLowerCase().replace(/\s+/g, '-');
+                    return `
+                    <div style="border: 1px solid var(--border-light, #e2e8f0); border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; background: #ffffff;">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
+                            <div>
+                                <span style="font-family: monospace; font-weight: 700; color: var(--accent); font-size: 0.9rem;">${g.reference_id}</span>
+                                <span style="margin: 0 6px; color: var(--text-light);">&bull;</span>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">${g.category}</span>
+                            </div>
+                            <span class="status-badge-pill status-${sLower}">${g.status}</span>
+                        </div>
+                        <h4 style="margin: 0 0 6px; font-size: 1rem; color: var(--text-primary);">${g.subject}</h4>
+                        <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 8px;">Submitted on ${new Date(g.created_at).toLocaleDateString()}</div>
+                        ${g.admin_response ? `
+                        <div style="background: #f5f3ff; border-left: 3px solid #7c3aed; padding: 8px 12px; font-size: 0.85rem; color: #1e1b4b; border-radius: 4px;">
+                            <strong>Grievance Officer Response:</strong> ${g.admin_response}
+                        </div>` : ''}
+                    </div>`;
+                }).join('');
+            } catch (err) {
+                listEl.innerHTML = '<div style="text-align:center; padding:1.5rem; color:#ef4444;">Error loading grievances.</div>';
+            }
+        }
+
+        // Auto-check if URL has query parameters
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const refParam = urlParams.get('ref');
+            const emailParam = urlParams.get('email');
+            if (refParam) {
+                switchGrievanceTab('track');
+                document.getElementById('track_reference_id').value = refParam;
+                if (emailParam) {
+                    document.getElementById('track_email').value = emailParam;
+                    document.getElementById('track-form').dispatchEvent(new Event('submit'));
+                }
+            } else {
+                {% if current_user.is_authenticated %}
+                loadMyGrievances();
+                {% endif %}
+            }
+        });
+    </script>
+</body>
+
+</html>
