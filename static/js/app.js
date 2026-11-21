@@ -1612,6 +1612,9 @@ function getCategoryBadgeHtml(cat) {
   } else if (cat === 'Feature Request') {
     badgeClass = 'feature';
     icon = 'fa-lightbulb';
+  } else if (cat === 'Security' || (cat && cat.toLowerCase().includes('security'))) {
+    badgeClass = 'security';
+    icon = 'fa-shield-halved';
   }
   return `<span class="ticket-category-badge ${badgeClass}"><i class="fas ${icon}"></i> ${escapeHtml(cat || 'General')}</span>`;
 }

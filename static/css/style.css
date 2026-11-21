@@ -3265,6 +3265,17 @@ body:not([data-active-view="dashboard"]) .top-nav-bar {
   color: #059669;
 }
 
+.ticket-category-badge.security {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+[data-theme="light"] .ticket-category-badge.security {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
 /* Empty State */
 .support-empty-state {
   padding: 3rem 1.5rem;

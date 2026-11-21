@@ -1227,7 +1227,7 @@ def admin_support_dashboard():
 @admin_required
 def admin_list_support_tickets():
     """List all support tickets across all users with search, filtering, and sorting (Admin only)."""
-    query = SupportTicket.query.join(User)
+    query = SupportTicket.query.outerjoin(User)
 
     status_filter = request.args.get('status', '').strip()
     if status_filter and status_filter != 'All':
@@ -2792,8 +2792,10 @@ def change_password():
 
     # Send email notification after successful password change
     try:
+        import urllib.parse
         change_time = datetime.utcnow().strftime('%B %d, %Y at %H:%M UTC')
-        support_url = f"{get_app_url()}/dashboard?view=support"
+        encoded_email = urllib.parse.quote(current_user.email)
+        security_support_url = f"{get_app_url()}/support/security/password-changed?email={encoded_email}"
         email_html = build_email_html(
             title="Your ExpenseFlow Password Has Been Changed",
             recipient_email=current_user.email,
@@ -2801,17 +2803,23 @@ def change_password():
                 f"Hello {current_user.display_name},<br><br>"
                 f"This email confirms that the password for your ExpenseFlow account (<strong>{current_user.email}</strong>) "
                 f"was successfully changed on <strong>{change_time}</strong>.<br><br>"
-                f"<strong>Security Notice:</strong> If you made this change, no further action is required.<br>"
-                f"If you did <strong>NOT</strong> make this change, please contact our support team immediately or reset your password to protect your account."
+                f"<strong>Security Notice:</strong> If you made this change, no further action is required.<br><br>"
+                f"If you did <strong>NOT</strong> make this password change, contact Help & Support immediately:<br>"
+                f"<a href=\"{security_support_url}\" style=\"color: #ef4444; font-weight: 700; text-decoration: underline;\">Report Unauthorized Password Change</a>"
             ),
-            button_text="Contact Help & Support",
-            button_url=support_url,
+            button_text="Report Unauthorized Password Change",
+            button_url=security_support_url,
             note_text="For your security, ExpenseFlow notifies you whenever sensitive security credentials are changed."
         )
         send_email(
             current_user.email,
             'Your ExpenseFlow Password Has Been Changed',
-            f"Hello {current_user.display_name},\n\nYour ExpenseFlow account password was successfully changed on {change_time}.\n\nIf you did not make this change, please contact support immediately at: {support_url}",
+            (
+                f"Hello {current_user.display_name},\n\n"
+                f"Your ExpenseFlow account password was successfully changed on {change_time}.\n\n"
+                f"If you did not make this password change, contact Help & Support immediately:\n"
+                f"Report Unauthorized Password Change: {security_support_url}"
+            ),
             html_body=email_html
         )
     except Exception as e:
@@ -2923,6 +2931,153 @@ def submit_contact_inquiry():
 
     return jsonify({
         'message': 'Thank you! Your message has been received. Our team will contact you shortly.',
+        'ticket_id': ticket_id
+    }), 201
+
+
+# ── Public Security Support Flow (Unauthorized Password Change) ──────
+@app.route('/support/security/password-changed', methods=['GET', 'POST'])
+@csrf.exempt
+@limiter.limit("5 per minute")
+def security_password_changed_page():
+    """Dedicated public security-support route for reporting unauthorized password changes."""
+    if request.method == 'GET':
+        prefill_email = (request.args.get('email') or '').strip()
+        return render_template('security_support.html', prefill_email=prefill_email)
+    return handle_security_report_submission()
+
+
+@app.route('/api/support/security/password-changed', methods=['POST'])
+@csrf.exempt
+@limiter.limit("5 per minute")
+def api_security_password_changed():
+    """API endpoint for submitting unauthorized password change security reports."""
+    return handle_security_report_submission()
+
+
+def handle_security_report_submission():
+    """Process public unauthorized password change report and create high-priority security ticket."""
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+    else:
+        data = request.form.to_dict() or {}
+
+    email = (data.get('email') or '').strip().lower()
+    subject = (data.get('subject') or 'I did not change my password').strip()
+    description = (data.get('description') or '').strip()
+    issue_type = (data.get('issue_type') or 'Unauthorized Password Change').strip()
+
+    if not email or '@' not in email or '.' not in email:
+        return jsonify({'error': 'Please provide a valid registered email address', 'code': 'INVALID_EMAIL'}), 400
+
+    if not description or len(description) < 10:
+        return jsonify({'error': 'Please provide a description of the issue (at least 10 characters)', 'code': 'INVALID_DESCRIPTION'}), 400
+
+    # Look up registered user without exposing account existence to public visitor
+    matched_user = User.query.filter_by(email=email).first()
+    user_id = matched_user.id if matched_user else None
+
+    # Anti-duplicate protection: check for same email reported within 2 minutes
+    recent_cutoff = datetime.utcnow() - timedelta(minutes=2)
+    recent_ticket = SupportTicket.query.filter(
+        SupportTicket.category == 'Security',
+        SupportTicket.created_at >= recent_cutoff,
+        SupportTicket.description.ilike(f"%{email}%")
+    ).first()
+
+    if recent_ticket:
+        return jsonify({
+            'message': 'Your security report has been submitted successfully.',
+            'ticket_id': recent_ticket.ticket_id,
+            'is_duplicate': True
+        }), 200
+
+    ticket_id = f"SEC-{datetime.utcnow().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}"
+    account_status_str = f"Yes (User ID: {user_id}, Name: {matched_user.full_name})" if matched_user else "Unregistered / Unknown Email"
+
+    full_description = (
+        f"🚨 URGENT SECURITY ALERT: Unauthorized Password Change Reported\n"
+        f"Priority: HIGH / URGENT\n"
+        f"Issue Type: {issue_type}\n"
+        f"Reported Account Email: {email}\n"
+        f"Account In Database: {account_status_str}\n"
+        f"Submission Time (UTC): {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
+        f"Client IP: {request.remote_addr}\n\n"
+        f"User Statement:\n{description}"
+    )
+
+    ticket = SupportTicket(
+        ticket_id=ticket_id,
+        user_id=user_id,
+        category='Security',
+        subject=f"[URGENT SECURITY] {subject} ({email})",
+        description=full_description,
+        status='Open',
+        admin_notes="Priority: HIGH / URGENT | Category: Unauthorized Password Change | Channel: Public Security Support Flow"
+    )
+    db.session.add(ticket)
+    db.session.commit()
+
+    # Dispatch admin alert notification
+    try:
+        admin_target_emails = [e.strip().lower() for e in os.getenv('ADMIN_EMAILS', '').split(',') if e.strip()]
+        support_email = os.getenv('SUPPORT_EMAIL') or os.getenv('FROM_EMAIL')
+        if support_email and support_email.lower() not in admin_target_emails:
+            admin_target_emails.append(support_email.lower())
+
+        for adm_email in admin_target_emails:
+            admin_notify_html = build_email_html(
+                title=f"🚨 URGENT: Unauthorized Password Change ({ticket_id})",
+                recipient_email=adm_email,
+                description_text=(
+                    f"<strong>URGENT SECURITY ALERT:</strong> A user has reported an unauthorized password change on their account.<br><br>"
+                    f"<strong>Ticket ID:</strong> {ticket_id}<br>"
+                    f"<strong>Priority:</strong> HIGH / URGENT<br>"
+                    f"<strong>Account Email:</strong> {email}<br>"
+                    f"<strong>Account In Database:</strong> {account_status_str}<br>"
+                    f"<strong>Subject:</strong> {subject}<br>"
+                    f"<strong>Details:</strong><br><blockquote style='margin:10px 0; padding:10px 14px; background:#fef2f2; border-left:3px solid #ef4444;'>{description}</blockquote>"
+                ),
+                button_text="Review Ticket in Admin Support",
+                button_url=url_for('admin_support_redirect', _external=True)
+            )
+            send_email(
+                adm_email,
+                f"[URGENT SECURITY] Unauthorized Password Change: {email} ({ticket_id})",
+                f"URGENT SECURITY REPORT\n\nTicket: {ticket_id}\nAccount: {email}\n\n{description}",
+                html_body=admin_notify_html
+            )
+    except Exception as e:
+        print(f"Notice: Admin security email dispatch log: {e}", flush=True)
+
+    # Dispatch user receipt confirmation
+    try:
+        user_receipt_html = build_email_html(
+            title=f"Security Report Received ({ticket_id})",
+            recipient_email=email,
+            description_text=(
+                f"Hello,<br><br>"
+                f"We have received your urgent security report (<strong>{ticket_id}</strong>) regarding an unauthorized password change on your ExpenseFlow account.<br><br>"
+                f"<strong>Priority:</strong> HIGH / URGENT<br>"
+                f"<strong>Status:</strong> Under Immediate Review<br><br>"
+                f"Our security and support team has been notified and is investigating. "
+                f"We will contact you at this email address with further verification steps to secure your account."
+            ),
+            button_text="Return to ExpenseFlow",
+            button_url=get_app_url(),
+            note_text="If you remembered that you made this password change yourself, you can reply to this email to let us know."
+        )
+        send_email(
+            email,
+            f"Security Report Received — {ticket_id}",
+            f"We received your security report {ticket_id} regarding an unauthorized password change. Our team is investigating with High/Urgent priority.",
+            html_body=user_receipt_html
+        )
+    except Exception as e:
+        print(f"Notice: User security receipt email log: {e}", flush=True)
+
+    return jsonify({
+        'message': 'Your security report has been submitted successfully.',
         'ticket_id': ticket_id
     }), 201
 
