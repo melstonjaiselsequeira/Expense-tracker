@@ -312,6 +312,12 @@ def test_contact_grievance_officer_links_to_internal_page_not_mailto(client):
     assert resp_p.status_code == 200
     html_p = resp_p.data.decode('utf-8')
     assert 'href="/grievance"' in html_p
+    assert 'Contact Grievance Officer / Submit Grievance Online' in html_p
+    assert 'Grievance &amp; Data Protection Officer' in html_p
+    assert 'ExpenseFlow Privacy &amp; Compliance Team' in html_p
+    assert 'Statutory Response Time' in html_p
+    assert 'within 30 days' in html_p
+    assert 'Data Protection Board of India' in html_p
 
     # 2. Terms page
     resp_t = client.get('/terms')
